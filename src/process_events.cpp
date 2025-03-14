@@ -150,7 +150,7 @@ bool ProcessEvents::GetEvent() {
 bool ProcessEvents::GetNumEvents(int num_events) {
 
     size_t event_count = 0;
-    while (!GetEvent() && num_events > 0) {
+    while (!GetEvent() && num_events > event_count) {
         event_count++;
     }
 
