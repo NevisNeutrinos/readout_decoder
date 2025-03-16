@@ -25,6 +25,8 @@ public:
 
     void FillFemDict(bool is_light);
     pybind11::dict GetEventDict() { return event_dict_; };
+    py::array_t<uint16_t> ReconstructLightWaveforms();
+    py::array_t<double> ReconstructLightAxis();
 
 private:
 
@@ -32,11 +34,11 @@ private:
     pybind11::dict event_dict_;
 
     // Convert 1D,2D std::array and std::vector to a NumPy array
-    py::array_t<uint16_t> vector_to_numpy_array_1d(const std::vector<uint16_t>& vec) {
+    static py::array_t<uint16_t> vector_to_numpy_array_1d(const std::vector<uint16_t>& vec) {
         return py::array_t(vec.size(), vec.data());
     }
 
-    py::array_t<uint16_t> vector_to_numpy_array_2d(const std::vector<std::vector<uint16_t>>& vec) {
+    static py::array_t<uint16_t> vector_to_numpy_array_2d(const std::vector<std::vector<uint16_t>>& vec) {
         if (vec.empty()) {
             return py::array_t<uint16_t>({0, 0});  // Return empty array if input is empty
         }
@@ -76,6 +78,7 @@ private:
     size_t charge_channel_number_ = 0;
     size_t light_roi_number_ = 0;
 
+    std::array<std::array<uint16_t, 595>, 64> charge_adc_arr_{};
     std::vector<std::vector<uint16_t>> charge_adc_{};
     std::vector<std::vector<uint16_t>> light_adc_{};
     std::vector<uint16_t> channel_number_{};

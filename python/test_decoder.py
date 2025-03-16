@@ -15,6 +15,6 @@ process.get_num_events(num_events)
 # it will return False until the last event is processed
 # in which case it will return True
 event_num = 0
-while not process.get_event():
+while process.get_event():
     print(event_num)
     event_num += 1

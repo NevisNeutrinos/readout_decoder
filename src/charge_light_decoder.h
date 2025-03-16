@@ -152,6 +152,7 @@ namespace decoder {
         LightHeader2 light_header2_t{};
         LightHeader3 light_header3_t{};
 
+        // Data fmarker checks
         static bool IsEventStart(const uint32_t word) {return (word & 0xFFFFFFFF) == event_start_;}
         static bool IsEventEnd(const uint32_t word) {return (word & 0xFFFFFFFF) == event_end_;}
         static bool IsHeaderWord(const uint16_t word) {return (word & 0xF000) == header_word_;}
@@ -168,6 +169,30 @@ namespace decoder {
         bool FemLightDecode(uint16_t header_word);
         void DecodeAdcWord(uint16_t word);
 
+        // Cast a whole FEM chunk (63 channels with N samples per channel)
+        // currently very slow FIXME
+        template <size_t N>
+        size_t GetChargeAdcChunk(size_t word_idx, size_t short_idx, int *buffer, std::array<std::array<uint16_t, N>, 64> *adc_arr) {
+            // Unfortunately we need this extra step because the buffer is 32b words but the ADC samples are
+            // 16b so there is no guarantee the first ADC word will align with the 32b word
+            uint16_t *tmp_buffer = reinterpret_cast<uint16_t *>(buffer);
+            uint16_t idx = word_idx * 2 + short_idx; // short_idx adjusts the 16b word left or right
+
+            // Cast all the Charge channels and samples at once, since it's fixed size across all events
+            // The buffer index is set to the current position so casting memory chunk [word_idx, word_idx+sizeof(adc_arr)]
+            std::memcpy(adc_arr, &tmp_buffer[idx], sizeof(*adc_arr)/sizeof(uint16_t));
+
+            // Need to increment the word index by the number of 32b words we
+            // just cast. In this case the chunk is 64 channels with N samples.
+            // The number of samples is templated because it's configurable while the
+            // number of channels is a fixed hardware property.
+            return word_idx + (sizeof(adc_arr) / sizeof(uint32_t));
+        }
+
+
+        /*
+         * Getter functions for the readout data
+         */
 
         // FEM headers and information
         // Header 1
@@ -184,10 +209,10 @@ namespace decoder {
         uint16_t GetTriggerSample() const { return fem_header6_t.trig_sample_number(); }
         uint16_t GetTriggerFrameNumber() const;
 
-        // Charge ADC words
-        // std::array<uint16_t, 1024> GetAdcWords () { adc_count_ = 0; return adc_word_array_; }
+        // Charge & Light ADC words
         std::vector<uint16_t> GetAdcWords () { return adc_word_array_; }
-        void ResetAdcWordVector() { adc_count_ = 0; adc_word_array_.clear(); }
+        void ResetAdcWordVector() { adc_word_array_.clear(); }
+
         // Light headers
         // Header 1
         uint16_t GetLightChannel() const { return light_header1_t.channel; }
@@ -197,11 +222,9 @@ namespace decoder {
             return ((light_header2_t.sample_num_upper & 0x1F) << 12) | (light_header3_t.sample_num_lower & 0xFFF);
         };
 
+        // These are for the FEM and light header state machines
         int HeaderWord{};
         int LightWord{};
-
-        static constexpr int kChargeAdcWord = 0;
-        static constexpr int kLightAdcWord = 1;
 
     private:
 
@@ -211,8 +234,6 @@ namespace decoder {
             return word1;
         }
 
-        size_t adc_count_ = 0;
-        // std::array<uint16_t, 1024> adc_word_array_{};
         std::vector<uint16_t> adc_word_array_;
 
     };
