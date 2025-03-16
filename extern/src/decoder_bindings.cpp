@@ -14,5 +14,6 @@ PYBIND11_MODULE(decoder_bindings, m) {
         .def(py::init<>()) // Constructor
         .def("open_file", &ProcessEvents::OpenFile)
         .def("get_event", &ProcessEvents::GetEvent)
-        .def("get_num_events", &ProcessEvents::GetNumEvents);
+        .def("get_num_events", &ProcessEvents::GetNumEvents)
+      . def("get_event_dict", &ProcessEvents::GetEventDict);
 }

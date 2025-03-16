@@ -114,8 +114,8 @@ namespace decoder {
 
     // General form for the ADC words, both charge and light
     struct AdcWord {
-        const uint16_t pad0 : 4;
         const uint16_t adc_word1 : 12;
+        const uint16_t pad0 : 4;
 
         uint16_t get_adc1() const { return adc_word1; }
     };
@@ -168,11 +168,34 @@ namespace decoder {
         bool FemLightDecode(uint16_t header_word);
         void DecodeAdcWord(uint16_t word);
 
+
+        // FEM headers and information
+        // Header 1
         uint16_t GetSlotNumber() const { return fem_header1_t.slot_number; }
-        uint16_t GetLightFrameNumber() const;
+        // Header 2
+        uint32_t GetNumAdcWords() const { return fem_header2_t.num_adc_words(); }
+        // Header 3
+        uint32_t GetEventNumber() const { return fem_header3_t.event_number(); }
+        // Header 4
+        uint32_t GetEventFrameNumber() const { return fem_header4_t.event_frame_number(); }
+        // Header 5
+        uint32_t GetCheckSum() const { return fem_header5_t.checksum(); }
+        // Header 6
+        uint16_t GetTriggerSample() const { return fem_header6_t.trig_sample_number(); }
         uint16_t GetTriggerFrameNumber() const;
-        std::array<uint16_t, 1024> GetAdcWords () { adc_count_ = 0; return adc_word_array_; }
-        uint16_t GetNumberOfAdcWords() const { return fem_header2_t.num_adc_words(); }
+
+        // Charge ADC words
+        // std::array<uint16_t, 1024> GetAdcWords () { adc_count_ = 0; return adc_word_array_; }
+        std::vector<uint16_t> GetAdcWords () { return adc_word_array_; }
+        void ResetAdcWordVector() { adc_count_ = 0; adc_word_array_.clear(); }
+        // Light headers
+        // Header 1
+        uint16_t GetLightChannel() const { return light_header1_t.channel; }
+        // Header 2 & 3
+        uint16_t GetLightFrameNumber() const;
+        uint16_t GetLightSampleNumber() const {
+            return ((light_header2_t.sample_num_upper & 0x1F) << 12) | (light_header3_t.sample_num_lower & 0xFFF);
+        };
 
         int HeaderWord{};
         int LightWord{};
@@ -189,7 +212,8 @@ namespace decoder {
         }
 
         size_t adc_count_ = 0;
-        std::array<uint16_t, 1024> adc_word_array_{};
+        // std::array<uint16_t, 1024> adc_word_array_{};
+        std::vector<uint16_t> adc_word_array_;
 
     };
 
