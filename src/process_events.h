@@ -25,19 +25,25 @@ public:
 
     void FillFemDict(bool is_light);
     pybind11::dict GetEventDict() { return event_dict_; };
-    py::array_t<uint16_t> ReconstructLightWaveforms();
+    void ReconstructLightWaveforms();
     py::array_t<double> ReconstructLightAxis();
+    py::array_t<uint16_t> ExtReconstructLightWaveforms(uint16_t channel, py::array_t<uint16_t> &channels,
+                    py::array_t<uint16_t> &samples, py::array_t<uint16_t> &frames, py::array_t<uint16_t> &adc_words);
+    py::array_t<double> ExtReconstructLightAxis(uint16_t trig_frame, uint16_t trig_sample, py::array_t<uint16_t> &frames);
 
 private:
 
     // For each FEM fill a python dictionary
     pybind11::dict event_dict_;
+    static constexpr size_t num_light_channels_ = 32;
 
     // Convert 1D,2D std::array and std::vector to a NumPy array
-    static py::array_t<uint16_t> vector_to_numpy_array_1d(const std::vector<uint16_t>& vec) {
+    template <typename T>
+    static py::array_t<T> vector_to_numpy_array_1d(const std::vector<T>& vec) {
         return py::array_t(vec.size(), vec.data());
     }
 
+    // template <typename T>
     static py::array_t<uint16_t> vector_to_numpy_array_2d(const std::vector<std::vector<uint16_t>>& vec) {
         if (vec.empty()) {
             return py::array_t<uint16_t>({0, 0});  // Return empty array if input is empty
@@ -84,6 +90,8 @@ private:
     std::vector<uint16_t> channel_number_{};
     std::vector<uint16_t> light_frame_number_{};
     std::vector<uint16_t> light_sample_number_{};
+    std::vector<std::vector<uint16_t>> channel_full_waveform_{};
+    std::vector<std::vector<size_t>> channel_full_axis_{};
 
 };
 

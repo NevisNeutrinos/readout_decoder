@@ -44,7 +44,7 @@ namespace decoder {
         const uint16_t num_adc_words_lower : 12;
         const uint16_t header_pack_1 : 4;
 
-        u_int32_t num_adc_words() const { return ((num_adc_words_upper << 12) & 0xFFF000) | (num_adc_words_lower & 0xFFF); }
+        uint32_t num_adc_words() const { return ((num_adc_words_upper << 12) & 0xFFF000) | (num_adc_words_lower & 0xFFF); }
     };
 
     // header 3
@@ -54,7 +54,7 @@ namespace decoder {
         const uint16_t event_number_lower : 12;
         const uint16_t header_pack_3 : 4;
 
-        u_int32_t event_number() const { return ((event_number_upper << 12) & 0xFFF000) | (event_number_lower & 0xFFF); }
+        uint32_t event_number() const { return ((event_number_upper << 12) & 0xFFF000) | (event_number_lower & 0xFFF); }
     };
 
     // header 4 FIXME this should be trigger frame
@@ -64,7 +64,7 @@ namespace decoder {
         const uint16_t frame_number_lower : 12;
         const uint16_t header_pack_5 : 4;
 
-        u_int32_t event_frame_number() const { return ((frame_number_upper << 12) & 0xFFF000) | (frame_number_lower & 0xFFF); }
+        uint32_t event_frame_number() const { return ((frame_number_upper << 12) & 0xFFF000) | (frame_number_lower & 0xFFF); }
     };
 
     // header 5
@@ -74,7 +74,7 @@ namespace decoder {
         const uint16_t checksum_lower : 12;
         const uint16_t header_pack_7 : 4;
 
-        u_int32_t checksum() const { return ((checksum_upper << 12) & 0xFFF000) | (checksum_lower & 0xFFF); }
+        uint32_t checksum() const { return ((checksum_upper << 12) & 0xFFF000) | (checksum_lower & 0xFFF); }
     };
 
     // header 6
@@ -87,8 +87,8 @@ namespace decoder {
         const uint16_t pad1 : 4;
         const uint16_t header_pack_9 : 4;
 
-        u_int32_t trig_sample_number() const { return ((trig_sample_number_upper << 4) & 0xF00) | (trig_sample_number_lower & 0xFF); }
-        u_int32_t trig_frame_number() const { return (trig_frame_number_lower & 0xF); }
+        uint32_t trig_sample_number() const { return ((trig_sample_number_upper << 4) & 0xF00) | (trig_sample_number_lower & 0xFF); }
+        uint32_t trig_frame_number() const { return (trig_frame_number_lower & 0xF); }
     };
 
 
@@ -207,7 +207,7 @@ namespace decoder {
         uint32_t GetCheckSum() const { return fem_header5_t.checksum(); }
         // Header 6
         uint16_t GetTriggerSample() const { return fem_header6_t.trig_sample_number(); }
-        uint16_t GetTriggerFrameNumber() const;
+        uint32_t GetTriggerFrameNumber() const;
 
         // Charge & Light ADC words
         std::vector<uint16_t> GetAdcWords () { return adc_word_array_; }
@@ -217,8 +217,8 @@ namespace decoder {
         // Header 1
         uint16_t GetLightChannel() const { return light_header1_t.channel; }
         // Header 2 & 3
-        uint16_t GetLightFrameNumber() const;
-        uint16_t GetLightSampleNumber() const {
+        uint32_t GetLightFrameNumber() const;
+        uint32_t GetLightSampleNumber() const {
             return ((light_header2_t.sample_num_upper & 0x1F) << 12) | (light_header3_t.sample_num_lower & 0xFFF);
         };
 
@@ -228,10 +228,11 @@ namespace decoder {
 
     private:
 
-        static uint16_t CorrectRollover(const uint16_t word1, const uint16_t word2) {
-            if ((word1 - word2) > 4) return word1 - 8;
-            if ((word1 - word2) < -4) return word1 + 8;
-            return word1;
+        static int32_t CorrectRollover(const uint32_t word1, const uint32_t word2) {
+            const int32_t diff = word1 - word2;
+            if (diff > 4) return -8;
+            if (diff < -4) return 8;
+            return 0;
         }
 
         std::vector<uint16_t> adc_word_array_;

@@ -76,18 +76,18 @@ namespace decoder {
         }
     }
 
-    uint16_t Decoder::GetLightFrameNumber() const {
-        const uint16_t fem_trigger_frame_number = fem_header6_t.trig_frame_number();
-        const uint16_t frame_num = (fem_trigger_frame_number & 0xFFFFF8) | light_header2_t.frame_num;
-
-        return CorrectRollover(frame_num, fem_header4_t.event_frame_number());
+    uint32_t Decoder::GetLightFrameNumber() const {
+        const uint32_t frame_num = (GetTriggerFrameNumber() & 0xFFFFF8) | (light_header2_t.frame_num & 0x7);
+        const uint32_t event_frame_number = fem_header4_t.event_frame_number();
+        return frame_num + CorrectRollover(frame_num, event_frame_number);
     }
 
-    uint16_t Decoder::GetTriggerFrameNumber() const {
-        const uint16_t fem_trigger_frame_number = fem_header6_t.trig_frame_number();
-        const uint16_t trig_frame_num = (fem_trigger_frame_number & 0xFFFFF0) | fem_header6_t.trig_frame_number_lower;
+    uint32_t Decoder::GetTriggerFrameNumber() const {
+        const uint32_t event_frame_number = fem_header4_t.event_frame_number();
+        const uint32_t trig_frame_num = (event_frame_number & 0xFFFFF0) | (fem_header6_t.trig_frame_number_lower & 0xF);
 
-        return CorrectRollover(fem_header4_t.event_frame_number(), trig_frame_num);
+        // return CorrectRollover(event_frame_number, trig_frame_num);
+        return trig_frame_num + CorrectRollover(event_frame_number, trig_frame_num);
     }
 
 } // decoder namespace

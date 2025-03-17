@@ -15,5 +15,7 @@ PYBIND11_MODULE(decoder_bindings, m) {
         .def("open_file", &ProcessEvents::OpenFile)
         .def("get_event", &ProcessEvents::GetEvent)
         .def("get_num_events", &ProcessEvents::GetNumEvents)
-      . def("get_event_dict", &ProcessEvents::GetEventDict);
+        .def("get_event_dict", &ProcessEvents::GetEventDict)
+        .def("get_full_light_waveform", &ProcessEvents::ExtReconstructLightWaveforms)
+        .def("get_full_light_axis", &ProcessEvents::ExtReconstructLightAxis);
 }
