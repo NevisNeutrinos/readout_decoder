@@ -29,8 +29,7 @@ Then the decoder can be used from python such as pandas
 
 ```python
 import decoder_bindings
-import pandas
-import copy
+import pandas as pd
 
 process = decoder_bindings.ProcessEvents()
 
@@ -46,7 +45,7 @@ charge_data = []
 light_data = []
 while process.get_event():
     try:
-        tmp_dict = copy.deepcopy(process.get_event_dict())
+        tmp_dict = process.get_event_dict()
         charge_data.append(tmp_dict['Charge'])
         light_data.append(tmp_dict['Light'][light_fem])
         print(event_num)
@@ -113,25 +112,23 @@ using the `get_full_light_waveform()` and `get_full_light_axis()`
 and plotted. The arguments fo the functions is
 
 ```python
-get_full_light_waveform(<channel_number>, <light_sample>, <light_frame>, <ROIs>)
+get_full_light_waveform(<channel_number>, <roi_sample>, <roi_frame>, <roi_list>)
 ```
 ```python
-get_full_light_axis(<trigger_frame>, <trigger_sample>, <light_frame>)
+get_full_light_axis(<trigger_frame>, <trigger_sample>, <roi_frame>)
 ```
 
 ```python
 event = 5
-fem_number = 16
 channel = 3
-full_waveform = proc.get_full_light_waveform(channel, df['Light'][event][fem_number]['channel'],
-                                             df['Light'][event][fem_number]['light_readout_sample'],
-                                             df['Light'][event][fem_number]['light_frame_number'],
-                                             df['Light'][event][fem_number]['adc_words'])
+full_waveform = proc.get_full_light_waveform(channel, light_df['channel'][event],
+                                             light_df['light_readout_sample'][event],
+                                             light_df['light_frame_number'][event],
+                                             light_df['adc_words'][event])
 
-full_axis = proc.get_full_light_axis(df['Light'][event][fem_number]['trigger_frame_number'],
-                                     df['Light'][event][fem_number]['trigger_sample'],
-                                     df['Light'][event][fem_number]['light_frame_number'])
-
+full_axis = proc.get_full_light_axis(light_df['trigger_frame_number'][event],
+                                     light_df['trigger_sample'][event],
+                                     light_df['light_frame_number'][event])
 plt.plot(full_axis/1e3, full_waveform)
 plt.xlabel("[$\mu$s]")
 ```
