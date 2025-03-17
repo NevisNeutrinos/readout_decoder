@@ -28,8 +28,8 @@ public:
     void ReconstructLightWaveforms();
     py::array_t<double> ReconstructLightAxis();
     py::array_t<uint16_t> ExtReconstructLightWaveforms(uint16_t channel, py::array_t<uint16_t> &channels,
-                    py::array_t<uint16_t> &samples, py::array_t<uint16_t> &frames, py::array_t<uint16_t> &adc_words);
-    py::array_t<double> ExtReconstructLightAxis(uint16_t trig_frame, uint16_t trig_sample, py::array_t<uint16_t> &frames);
+                        py::array_t<uint32_t> &samples, py::array_t<uint32_t> &frames, py::array_t<uint16_t> &adc_words);
+    py::array_t<double> ExtReconstructLightAxis(uint32_t trig_frame, uint32_t trig_sample, py::array_t<uint32_t> &frames);
 
 private:
 
@@ -88,7 +88,7 @@ private:
     std::vector<std::vector<uint16_t>> charge_adc_{};
     std::vector<std::vector<uint16_t>> light_adc_{};
     std::vector<uint16_t> channel_number_{};
-    std::vector<uint16_t> light_frame_number_{};
+    std::vector<uint32_t> light_frame_number_{};
     std::vector<uint16_t> light_sample_number_{};
     std::vector<std::vector<uint16_t>> channel_full_waveform_{};
     std::vector<std::vector<size_t>> channel_full_axis_{};

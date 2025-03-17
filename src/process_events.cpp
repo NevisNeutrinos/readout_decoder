@@ -225,7 +225,7 @@ void ProcessEvents::FillFemDict(const bool is_light) {
 }
 
 py::array_t<uint16_t> ProcessEvents::ExtReconstructLightWaveforms(uint16_t channel, py::array_t<uint16_t> &channels,
-    py::array_t<uint16_t> &samples, py::array_t<uint16_t> &frames, py::array_t<uint16_t> &adc_words) {
+    py::array_t<uint32_t> &samples, py::array_t<uint32_t> &frames, py::array_t<uint16_t> &adc_words) {
 
     constexpr int samples_per_frame = 255 * 32; // timesize * 32MHz
     std::array<uint16_t, 4 * samples_per_frame> channel_full_waveform{};
@@ -241,13 +241,13 @@ py::array_t<uint16_t> ProcessEvents::ExtReconstructLightWaveforms(uint16_t chann
 
     // Access data
     auto* channel_ptr = static_cast<uint16_t*>(buf_ch.ptr);
-    auto* sample_ptr = static_cast<uint16_t*>(buf_sample.ptr);
-    auto* frame_ptr = static_cast<uint16_t*>(buf_frame.ptr);
+    auto* sample_ptr = static_cast<uint32_t*>(buf_sample.ptr);
+    auto* frame_ptr = static_cast<uint32_t*>(buf_frame.ptr);
     auto* adc_word_ptr = static_cast<uint16_t*>(buf_adc_word.ptr);
     //########################
 
     const auto min_it = std::min_element(frame_ptr, frame_ptr + buf_frame.size);
-    uint16_t min_frame_number = min_it != (frame_ptr + buf_frame.size) ? *min_it : 0;
+    uint32_t min_frame_number = min_it != (frame_ptr + buf_frame.size) ? *min_it : 0;
 
     for (size_t roi = 0; roi < buf_ch.size; roi++) {
         if (channel_ptr[roi] != channel) continue;
@@ -261,20 +261,20 @@ py::array_t<uint16_t> ProcessEvents::ExtReconstructLightWaveforms(uint16_t chann
     return to_numpy_array_1d(channel_full_waveform);
 }
 
-py::array_t<double> ProcessEvents::ExtReconstructLightAxis(uint16_t trig_frame, uint16_t trig_sample, py::array_t<uint16_t> &frames) {
+py::array_t<double> ProcessEvents::ExtReconstructLightAxis(uint32_t trig_frame, uint32_t trig_sample, py::array_t<uint32_t> &frames) {
     constexpr int samples_per_frame = 255 * 32; // timesize * 32MHz
     constexpr double light_sample_interval = 15.625;
 
     //######################
     // Get buffer info
     const py::buffer_info buf_frame = frames.request();
-    auto* frame_ptr = static_cast<uint16_t*>(buf_frame.ptr);
+    auto* frame_ptr = static_cast<uint32_t*>(buf_frame.ptr);
 
     const auto min_it = std::min_element(frame_ptr, frame_ptr + buf_frame.size);
     uint16_t min_frame_number = min_it != (frame_ptr + buf_frame.size) ? *min_it : 0;
 
-    uint16_t frame_offset = (trig_frame - min_frame_number) * light_sample_interval;
-    uint16_t trigger_index = frame_offset + (trig_sample * 32);
+    uint32_t frame_offset = (trig_frame - min_frame_number) * light_sample_interval;
+    uint32_t trigger_index = frame_offset + (trig_sample * 32);
 
     std::array<double, 4 * samples_per_frame> light_axis{};
     double tick_idx = 0;
@@ -290,9 +290,9 @@ py::array_t<double> ProcessEvents::ReconstructLightAxis() {
     constexpr double light_sample_interval = 15.625;
 
     const auto min_it = std::min_element(light_frame_number_.begin(), light_frame_number_.end());
-    uint16_t min_frame_number = min_it != light_frame_number_.end() ? *min_it : 0;
+    uint32_t min_frame_number = min_it != light_frame_number_.end() ? *min_it : 0;
 
-    uint16_t frame_offset = (charge_light_decoder_->GetTriggerFrameNumber() - min_frame_number) * light_sample_interval;
+    uint32_t frame_offset = (charge_light_decoder_->GetTriggerFrameNumber() - min_frame_number) * light_sample_interval;
     uint16_t trigger_index = frame_offset + (charge_light_decoder_->GetTriggerSample() * 32);
 
     std::array<double, 10 * samples_per_frame> light_axis{};
@@ -308,7 +308,7 @@ void ProcessEvents::ReconstructLightWaveforms() {
     constexpr size_t samples_per_frame = 255 * 32; // timesize * 32MHz
 
     const auto min_it = std::min_element(light_frame_number_.begin(), light_frame_number_.end());
-    uint16_t min_frame_number = min_it != light_frame_number_.end() ? *min_it : 0;
+    uint32_t min_frame_number = min_it != light_frame_number_.end() ? *min_it : 0;
 
     for (size_t roi = 0; roi < channel_number_.size(); roi++) {
         size_t channel = channel_number_.at(roi);

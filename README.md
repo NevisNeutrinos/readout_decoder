@@ -121,12 +121,12 @@ get_full_light_axis(<trigger_frame>, <trigger_sample>, <roi_frame>)
 ```python
 event = 5
 channel = 3
-full_waveform = proc.get_full_light_waveform(channel, light_df['channel'][event],
+full_waveform = process.get_full_light_waveform(channel, light_df['channel'][event],
                                              light_df['light_readout_sample'][event],
                                              light_df['light_frame_number'][event],
                                              light_df['adc_words'][event])
 
-full_axis = proc.get_full_light_axis(light_df['trigger_frame_number'][event],
+full_axis = process.get_full_light_axis(light_df['trigger_frame_number'][event],
                                      light_df['trigger_sample'][event],
                                      light_df['light_frame_number'][event])
 plt.plot(full_axis/1e3, full_waveform)
