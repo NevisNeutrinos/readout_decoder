@@ -40,33 +40,27 @@ process.open_file(test_file)
 # Iterate through file, one event at a time
 # it will return True until the last event is processed
 # in which case it will return False
+light_fem = 16
 event_num = 0
-event_dict = {}
+charge_data = []
+light_data = []
 while process.get_event():
-    event_dict[event_num] = copy.deepcopy(process.get_event_dict())
-    print(event_num)
-    event_num += 1
+    try:
+        tmp_dict = copy.deepcopy(process.get_event_dict())
+        charge_data.append(tmp_dict['Charge'])
+        light_data.append(tmp_dict['Light'][light_fem])
+        print(event_num)
+        event_num += 1
+    except:
+        continue
 
-df = pandas.DataFrame(event_dict).T
+charge_df = pd.DataFrame(charge_data)
+light_df = pd.DataFrame(light_data)
 ```
-Each row is an event with `Charge` and `Light` columns,
-```python
-Event	Light	Charge
-0	{16: {'slot_number': 16, 'num_adc_word': 121, ...	{0: {'slot_number': 0, 'num_adc_word': 0, 'eve...
-1	{16: {'slot_number': 16, 'num_adc_word': 121, ...	{0: {'slot_number': 0, 'num_adc_word': 0, 'eve...
-2	{16: {'slot_number': 16, 'num_adc_word': 121, ...	{0: {'slot_number': 0, 'num_adc_word': 0, 'eve...
-3	{16: {'slot_number': 16, 'num_adc_word': 121, ...	{0: {'slot_number': 0, 'num_adc_word': 0, 'eve...
-4	{16: {'slot_number': 16, 'num_adc_word': 121, ...	{0: {'slot_number': 0, 'num_adc_word': 0, 'eve...
-```
-and each event is a dictionary of the data. For the charge FEMs we have, 
+Each row is an event with a dictionary of the data. For the charge FEMs we have, 
 (the event number is +1 to the real event number) 
 
 ```python
->>> event = 5
->>> fem_number = 15
->>> df['Charge'][event][fem_number]
-
-
 {'slot_number': 15,
  'num_adc_word': 38207,
  'event_number': 6,
@@ -91,14 +85,6 @@ and each event is a dictionary of the data. For the charge FEMs we have,
 The light FEM has this data format. 
 
 ```python
->>> event = 5
->>> fem_number = 16
->>> df['Light'][event][fem_number]
-
-
-event = 5
-fem_number = 16
-df['Light'][event][fem_number]
 {'slot_number': 16,
  'num_adc_word': 121,
  'event_number': 5,
@@ -120,7 +106,6 @@ df['Light'][event][fem_number]
                      [2047, 2047, 2160, 2618, 3055, 3263, 3248, 3099, 2897, 2695, 2518,
                       2380, 2277, 2201, 2150, 2113, 2092, 2074, 2065, 2057]],
                     dtype=uint16)}
-
 ```
 
 The full waveform for a channel in an event can be reconstructed 
