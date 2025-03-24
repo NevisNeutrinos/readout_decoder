@@ -82,32 +82,21 @@ bool ProcessEvents::GetEvent() {
         word_idx_++;
         if (decoder::Decoder::IsEventStart(word_32)) {
             // Reset the FEM header decoder state machine
-            charge_light_decoder_->HeaderWord = 0;
+            ClearFemVectors();
             continue;
-        } if (decoder::Decoder::IsEventEnd(word_32)) {
+        }
+        if (decoder::Decoder::IsEventEnd(word_32)) {
             if ((event_number_ % 100) == 0) std::cout << "+++ Event [" << event_number_ << "]" << std::endl;
             event_number_++;
-            is_light = charge_light_decoder_->GetSlotNumber() == 16;
-            if (end_fem) FillFemDict(is_light);
-            end_fem = false;
+            FillFemDict();
             return true;
         }
-
         if (decoder::Decoder::IsHeaderWord(word_32)) {
-            // FIXME handle more FEMs
-            is_light = charge_light_decoder_->GetSlotNumber() == 16;
-            if (end_fem) FillFemDict(is_light);
-            end_fem = false;
-            charge_light_decoder_->FemHeaderDecode(word_32);
-            charge_channel_number_ = 0;
-            channel_number_.clear();
-            charge_adc_.clear();
-            light_adc_.clear();
-            light_frame_number_.clear();
-            light_sample_number_.clear();
+            // returns true when the last FEM header word is reached, so set the FEM data
+            if (charge_light_decoder_->FemHeaderDecode(word_32)) SetFemData();
             continue;
         }
-        end_fem = true;
+
         const uint16_t slot_number = charge_light_decoder_->GetSlotNumber();
         for (size_t j = 0; j < 2; j++) {
 
@@ -116,19 +105,17 @@ bool ProcessEvents::GetEvent() {
             // (32b word >> 16) & 0xFFFF is 1L the 2nd word
             uint16_t word = j == 0 ? word_32 & 0xFFFF : (word_32 >> 16) & 0xFFFF;
 
-            if (decoder::Decoder::ChargeChannelStart(word) && slot_number != 16) {
+            if (decoder::Decoder::ChargeChannelStart(word) && !read_charge_channel && slot_number != 16) {
                 // std::cout << "ChargeChannel Start " << (word & 0x3F) << "\n";
                 read_charge_channel = true;
             }
-            else if (decoder::Decoder::ChargeChannelEnd(word) && slot_number != 16) {
+            else if (decoder::Decoder::ChargeChannelEnd(word) && read_charge_channel && slot_number != 16) {
                 read_charge_channel = false;
                 charge_adc_.push_back(charge_light_decoder_->GetAdcWords());
                 charge_light_decoder_->ResetAdcWordVector();
-                channel_number_.push_back(charge_channel_number_);
-                charge_channel_number_++;
+                charge_channel_.push_back(charge_channel_number_++);
             }
             else if (read_charge_channel) {
-                // FIXME, does this work!?
                 charge_light_decoder_->DecodeAdcWord(word);
                 // charge_light_decoder_->GetChargeAdcChunk<595>(word_idx_, j, file_buffer_, &charge_adc_arr_);
                 // j = 1; // we are guaranteed to have the chunk aligned to the 32b word so break the loop
@@ -154,7 +141,7 @@ bool ProcessEvents::GetEvent() {
                     charge_light_decoder_->LightWord = 0;
                     light_adc_.push_back(charge_light_decoder_->GetAdcWords());
                     charge_light_decoder_->ResetAdcWordVector();
-                    channel_number_.push_back(charge_light_decoder_->GetLightChannel());
+                    light_channel_.push_back(charge_light_decoder_->GetLightChannel());
                     light_frame_number_.push_back(charge_light_decoder_->GetLightFrameNumber());
                     light_sample_number_.push_back(charge_light_decoder_->GetLightSampleNumber());
                     light_word_header_done = false;
@@ -176,7 +163,35 @@ bool ProcessEvents::GetEvent() {
     return false;
 }
 
-bool ProcessEvents::GetNumEvents(int num_events) {
+void ProcessEvents::SetFemData() {
+    slot_number_v_.push_back(charge_light_decoder_->GetSlotNumber());
+    event_number_v_.push_back(charge_light_decoder_->GetEventNumber());
+    num_adc_word_v_.push_back(charge_light_decoder_->GetNumAdcWords());
+    event_frame_number_v_.push_back(charge_light_decoder_->GetEventFrameNumber());
+    trigger_frame_number_v_.push_back(charge_light_decoder_->GetTriggerFrameNumber());
+    check_sum_v_.push_back(charge_light_decoder_->GetCheckSum());
+    trigger_sample_v_.push_back(charge_light_decoder_->GetTriggerSample());
+}
+
+void ProcessEvents::ClearFemVectors() {
+    charge_light_decoder_->HeaderWord = 0;
+    charge_channel_number_ = 0;
+    charge_channel_.clear();
+    charge_adc_.clear();
+    light_channel_.clear();
+    light_adc_.clear();
+    light_frame_number_.clear();
+    light_sample_number_.clear();
+    event_number_v_.clear();
+    slot_number_v_.clear();
+    num_adc_word_v_.clear();
+    event_frame_number_v_.clear();
+    trigger_frame_number_v_.clear();
+    check_sum_v_.clear();
+    trigger_sample_v_.clear();
+}
+
+bool ProcessEvents::GetNumEvents(const int num_events) {
 
     size_t event_count = 0;
     while (GetEvent() && num_events > event_count) {
@@ -190,7 +205,7 @@ bool ProcessEvents::GetNumEvents(int num_events) {
     return true;
 }
 
-void ProcessEvents::FillFemDict(const bool is_light) {
+void ProcessEvents::FillFemDict() {
     pybind11::dict fem_dict_;
     // Clear and then init the vectors
     channel_full_waveform_.clear();
@@ -199,29 +214,24 @@ void ProcessEvents::FillFemDict(const bool is_light) {
         channel_full_waveform_.emplace_back();
         channel_full_axis_.emplace_back();
     }
+    // FEM header
+    fem_dict_["slot_number"] = vector_to_numpy_array_1d(slot_number_v_);
+    fem_dict_["num_adc_word"] = vector_to_numpy_array_1d(num_adc_word_v_);
+    fem_dict_["event_number"] = vector_to_numpy_array_1d(event_number_v_);
+    fem_dict_["event_frame_number"] = vector_to_numpy_array_1d(event_frame_number_v_);
+    fem_dict_["trigger_frame_number"] = vector_to_numpy_array_1d(trigger_frame_number_v_);
+    fem_dict_["check_sum"] = vector_to_numpy_array_1d(check_sum_v_);
+    fem_dict_["trigger_sample"] = vector_to_numpy_array_1d(trigger_sample_v_);
+    // Light
+    fem_dict_["light_channel"] = vector_to_numpy_array_1d(light_channel_);
+    fem_dict_["light_frame_number"] = vector_to_numpy_array_1d(light_frame_number_);
+    fem_dict_["light_readout_sample"] = vector_to_numpy_array_1d(light_sample_number_);
+    fem_dict_["light_adc_words"] = vector_to_numpy_array_2d(light_adc_);
+    // Charge
+    fem_dict_["charge_channel"] = vector_to_numpy_array_1d(charge_channel_);
+    fem_dict_["charge_adc_words"] = vector_to_numpy_array_2d(charge_adc_);
 
-    fem_dict_["slot_number"] = charge_light_decoder_->GetSlotNumber();
-    fem_dict_["num_adc_word"] = charge_light_decoder_->GetNumAdcWords();
-    fem_dict_["event_number"] = charge_light_decoder_->GetEventNumber();
-    fem_dict_["event_frame_number"] = charge_light_decoder_->GetEventFrameNumber();
-    fem_dict_["trigger_frame_number"] = charge_light_decoder_->GetTriggerFrameNumber();
-    fem_dict_["check_sum"] = charge_light_decoder_->GetCheckSum();
-    fem_dict_["trigger_sample"] = charge_light_decoder_->GetTriggerSample();
-
-    if (is_light) {
-        fem_dict_["channel"] = vector_to_numpy_array_1d(channel_number_);
-        fem_dict_["light_frame_number"] = vector_to_numpy_array_1d(light_frame_number_);
-        fem_dict_["light_readout_sample"] = vector_to_numpy_array_1d(light_sample_number_);
-        fem_dict_["adc_words"] = vector_to_numpy_array_2d(light_adc_);
-        // fem_dict_["adc_words_reco"] = vector_to_numpy_array_2d<uint16_t>(channel_full_waveform_);
-        // fem_dict_["adc_axis_reco"] = vector_to_numpy_array_2d<size_t>(channel_full_axis_);
-        event_dict_["Light"][fem_dict_["slot_number"]] = fem_dict_;
-    } else {
-        fem_dict_["channel"] = vector_to_numpy_array_1d(channel_number_);
-        fem_dict_["adc_words"] = vector_to_numpy_array_2d(charge_adc_);
-        // fem_dict_["adc_words"] = to_numpy_array_2d(charge_adc_arr_);
-        event_dict_["Charge"][fem_dict_["slot_number"]] = fem_dict_;
-    }
+    event_dict_ = fem_dict_;
 }
 
 py::array_t<uint16_t> ProcessEvents::ExtReconstructLightWaveforms(uint16_t channel, py::array_t<uint16_t> &channels,
@@ -273,8 +283,8 @@ py::array_t<double> ProcessEvents::ExtReconstructLightAxis(uint32_t trig_frame, 
     const auto min_it = std::min_element(frame_ptr, frame_ptr + buf_frame.size);
     uint16_t min_frame_number = min_it != (frame_ptr + buf_frame.size) ? *min_it : 0;
 
-    uint32_t frame_offset = (trig_frame - min_frame_number) * light_sample_interval;
-    uint32_t trigger_index = frame_offset + (trig_sample * 32);
+    const double frame_offset = (trig_frame - min_frame_number) * light_sample_interval;
+    const double trigger_index = frame_offset + (trig_sample * 32);
 
     std::array<double, 4 * samples_per_frame> light_axis{};
     double tick_idx = 0;
@@ -292,8 +302,8 @@ py::array_t<double> ProcessEvents::ReconstructLightAxis() {
     const auto min_it = std::min_element(light_frame_number_.begin(), light_frame_number_.end());
     uint32_t min_frame_number = min_it != light_frame_number_.end() ? *min_it : 0;
 
-    uint32_t frame_offset = (charge_light_decoder_->GetTriggerFrameNumber() - min_frame_number) * light_sample_interval;
-    uint16_t trigger_index = frame_offset + (charge_light_decoder_->GetTriggerSample() * 32);
+    const double frame_offset = (charge_light_decoder_->GetTriggerFrameNumber() - min_frame_number) * light_sample_interval;
+    const double trigger_index = frame_offset + (charge_light_decoder_->GetTriggerSample() * 32);
 
     std::array<double, 10 * samples_per_frame> light_axis{};
     double tick_idx = 0;
@@ -310,8 +320,8 @@ void ProcessEvents::ReconstructLightWaveforms() {
     const auto min_it = std::min_element(light_frame_number_.begin(), light_frame_number_.end());
     uint32_t min_frame_number = min_it != light_frame_number_.end() ? *min_it : 0;
 
-    for (size_t roi = 0; roi < channel_number_.size(); roi++) {
-        size_t channel = channel_number_.at(roi);
+    for (size_t roi = 0; roi < light_channel_.size(); roi++) {
+        size_t channel = light_channel_.at(roi);
         if (channel > 31) continue;
         size_t frame_offset = (light_frame_number_.at(roi) - min_frame_number) * samples_per_frame;
         size_t start_idx = light_sample_number_.at(roi) + frame_offset;

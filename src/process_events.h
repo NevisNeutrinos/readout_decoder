@@ -23,7 +23,9 @@ public:
     bool GetNumEvents(int num_events);
     bool GetEvent();
 
-    void FillFemDict(bool is_light);
+    void FillFemDict();
+    void SetFemData();
+    void ClearFemVectors();
     pybind11::dict GetEventDict() { return event_dict_; };
     void ReconstructLightWaveforms();
     py::array_t<double> ReconstructLightAxis();
@@ -87,11 +89,22 @@ private:
     std::array<std::array<uint16_t, 595>, 64> charge_adc_arr_{};
     std::vector<std::vector<uint16_t>> charge_adc_{};
     std::vector<std::vector<uint16_t>> light_adc_{};
-    std::vector<uint16_t> channel_number_{};
+    std::vector<uint16_t> charge_channel_{};
+    std::vector<uint16_t> light_channel_{};
     std::vector<uint32_t> light_frame_number_{};
     std::vector<uint16_t> light_sample_number_{};
     std::vector<std::vector<uint16_t>> channel_full_waveform_{};
     std::vector<std::vector<size_t>> channel_full_axis_{};
+
+    // FEM data
+    std::vector<uint16_t> slot_number_v_;
+    std::vector<uint32_t> num_adc_word_v_;
+    std::vector<uint16_t> event_number_v_;
+    std::vector<uint16_t> event_frame_number_v_;
+    std::vector<uint16_t> trigger_frame_number_v_;
+    std::vector<uint16_t> check_sum_v_;
+    std::vector<uint16_t> trigger_sample_v_;
+
 
 };
 

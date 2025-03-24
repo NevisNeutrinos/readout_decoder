@@ -114,10 +114,10 @@ namespace decoder {
 
     // General form for the ADC words, both charge and light
     struct AdcWord {
-        const uint16_t adc_word1 : 12;
+        const uint16_t adc_word : 12;
         const uint16_t pad0 : 4;
 
-        uint16_t get_adc1() const { return adc_word1; }
+        uint16_t get_adc1() const { return adc_word; }
     };
 
 #pragma pack(pop) // Restore default alignment
@@ -165,7 +165,7 @@ namespace decoder {
         static bool LightRoiHeader2(const uint16_t word) {return (word & 0x3000) == light_roi_header2_;}
         static bool LightRoiEnd(const uint16_t word) {return (word & 0x3000) == light_roi_end_;}
 
-        void FemHeaderDecode(uint32_t header_word);
+        bool FemHeaderDecode(uint32_t header_word);
         bool FemLightDecode(uint16_t header_word);
         void DecodeAdcWord(uint16_t word);
 
@@ -210,7 +210,7 @@ namespace decoder {
         uint32_t GetTriggerFrameNumber() const;
 
         // Charge & Light ADC words
-        std::vector<uint16_t> GetAdcWords () { return adc_word_array_; }
+        std::vector<uint16_t> GetAdcWords () { return std::move(adc_word_array_); }
         void ResetAdcWordVector() { adc_word_array_.clear(); }
 
         // Light headers

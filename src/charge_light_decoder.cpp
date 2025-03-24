@@ -7,7 +7,7 @@ namespace decoder {
 
     void Decoder::DecodeAdcWord(const uint16_t word) {
         std::memcpy(&adc_word_t, &word, sizeof(adc_word_t));
-        adc_word_array_.push_back(adc_word_t.adc_word1);
+        adc_word_array_.push_back(adc_word_t.adc_word);
     }
 
     bool Decoder::FemLightDecode(const uint16_t header_word) {
@@ -36,42 +36,43 @@ namespace decoder {
         }
     }
 
-    void Decoder::FemHeaderDecode(const uint32_t header_word) {
+    bool Decoder::FemHeaderDecode(const uint32_t header_word) {
         // There are 6 FEM header words, here we iterate through them
         switch (HeaderWord) {
             case 0: { // header 1
                 std::memcpy(&fem_header1_t, &header_word, sizeof(fem_header1_t));
                 HeaderWord++;
-                break;
+                return false;
             }
             case 1: { // header 2
                 std::memcpy(&fem_header2_t, &header_word, sizeof(fem_header2_t));
                 HeaderWord++;
-                break;
+                return false;
             }
             case 2: { // header 3
                 std::memcpy(&fem_header3_t, &header_word, sizeof(fem_header3_t));
                 HeaderWord++;
-                break;
+                return false;
             }
             case 3: { // header 4
                 std::memcpy(&fem_header4_t, &header_word, sizeof(fem_header4_t));
                 HeaderWord++;
-                break;
+                return false;
             }
             case 4: { // header 5
                 std::memcpy(&fem_header5_t, &header_word, sizeof(fem_header5_t));
                 HeaderWord++;
-                break;
+                return false;
             }
             case 5: { // header 6
                 std::memcpy(&fem_header6_t, &header_word, sizeof(fem_header6_t));
                 HeaderWord = 0; // reset back to first wod
-                break;
+                return true;
             }
             default: {
                 std::cerr << "Unknown Header Word: " << HeaderWord << std::endl;
                 HeaderWord = 0;
+                return false;
             }
         }
     }
