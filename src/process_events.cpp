@@ -9,7 +9,7 @@
 namespace py = pybind11;
 
 ProcessEvents::ProcessEvents(const uint16_t light_slot): charge_light_decoder_(nullptr), light_slot_(light_slot) {
-    charge_light_decoder_ = new decoder::Decoder;
+    charge_light_decoder_ = std::make_unique<decoder::Decoder>(); //new decoder::Decoder;
     event_dict_["Light"] = py::dict();
     event_dict_["Charge"] = py::dict();
     channel_full_waveform_.reserve(num_light_channels_);
@@ -20,10 +20,12 @@ ProcessEvents::~ProcessEvents() {
 
     if (data_file_) {
         std::cout << "Closing data file!" << std::endl;
+        file_buffer_.reset(nullptr);
         fclose(data_file_);
+        delete[] data_file_;
         data_file_ = nullptr;
     }
-    delete charge_light_decoder_;
+    charge_light_decoder_.reset(nullptr);
 }
 
 bool ProcessEvents::OpenFile(const std::string &file_name) {
@@ -31,8 +33,10 @@ bool ProcessEvents::OpenFile(const std::string &file_name) {
     // In case there's a file already open
     word_idx_ = 0;
     if (data_file_) {
+        file_buffer_.reset(nullptr);
         std::cout << "Closing data file!" << std::endl;
         fclose(data_file_);
+        delete[] data_file_;
         data_file_ = nullptr;
     }
 
@@ -52,10 +56,11 @@ bool ProcessEvents::OpenFile(const std::string &file_name) {
     std::cout << "File size: " << fileSize << std::endl;
 
     // allocate space in the buffer for the whole file
-    file_buffer_ = new int[file_num_words_];
+
+    file_buffer_ = std::make_unique<int[]>(file_num_words_);
     std::cout << "Allocated file buffer.." << std::endl;
 
-    fread(file_buffer_, fileSize, 1, data_file_);
+    fread(file_buffer_.get(), fileSize, 1, data_file_);
     if (ferror(data_file_)) {
         std::cerr << "Error reading file: " << file_name << std::endl;
         std::cerr << "Error code: [" << errno << "]" << std::endl;
@@ -70,8 +75,6 @@ bool ProcessEvents::GetEvent() {
     bool read_charge_channel = false;
     bool read_light_channel = false;
     bool light_word_header_done = false;
-    bool end_fem = false;
-    bool is_light = false;
 
     // This will run from the start of the event until
     // end of event marker is reached or if all words are

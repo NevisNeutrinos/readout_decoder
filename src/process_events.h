@@ -75,9 +75,10 @@ private:
         return py::array_t<uint16_t>({M, N}, &arr[0][0]);
     }
 
-    decoder::Decoder *charge_light_decoder_;
+    std::unique_ptr<decoder::Decoder> charge_light_decoder_;
     FILE *data_file_{};
-    int *file_buffer_{};
+    std::unique_ptr<int[]> file_buffer_{};
+
     size_t file_num_words_{};
     size_t word_idx_ = 0;
 
