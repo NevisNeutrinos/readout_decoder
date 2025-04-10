@@ -1,6 +1,6 @@
 import decoder_bindings
 
-process = decoder_bindings.ProcessEvents()
+process = decoder_bindings.ProcessEvents(light_slot=16)
 
 test_file = "/Users/jonsensenig/work/grams/daq_ana/jon_test/pGRAMS_bin_992.dat"
 process.open_file(test_file)

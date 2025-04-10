@@ -8,7 +8,7 @@
 
 namespace py = pybind11;
 
-ProcessEvents::ProcessEvents(): charge_light_decoder_(nullptr) {
+ProcessEvents::ProcessEvents(const uint16_t light_slot): charge_light_decoder_(nullptr), light_slot_(light_slot) {
     charge_light_decoder_ = new decoder::Decoder;
     event_dict_["Light"] = py::dict();
     event_dict_["Charge"] = py::dict();
@@ -105,11 +105,11 @@ bool ProcessEvents::GetEvent() {
             // (32b word >> 16) & 0xFFFF is 1L the 2nd word
             uint16_t word = j == 0 ? word_32 & 0xFFFF : (word_32 >> 16) & 0xFFFF;
 
-            if (decoder::Decoder::ChargeChannelStart(word) && !read_charge_channel && slot_number != 16) {
+            if (decoder::Decoder::ChargeChannelStart(word) && !read_charge_channel && slot_number != light_slot_) {
                 // std::cout << "ChargeChannel Start " << (word & 0x3F) << "\n";
                 read_charge_channel = true;
             }
-            else if (decoder::Decoder::ChargeChannelEnd(word) && read_charge_channel && slot_number != 16) {
+            else if (decoder::Decoder::ChargeChannelEnd(word) && read_charge_channel && slot_number != light_slot_) {
                 read_charge_channel = false;
                 charge_adc_.push_back(charge_light_decoder_->GetAdcWords());
                 charge_light_decoder_->ResetAdcWordVector();
@@ -121,10 +121,10 @@ bool ProcessEvents::GetEvent() {
                 // j = 1; // we are guaranteed to have the chunk aligned to the 32b word so break the loop
                 // break; // we are guaranteed to have the chunk aligned to the 32b word so break the loop
             }
-            else if (decoder::Decoder::LightChannelStart(word) && slot_number == 16) {
+            else if (decoder::Decoder::LightChannelStart(word) && slot_number == light_slot_) {
                 read_light_channel = true;
             }
-            else if (decoder::Decoder::LightChannelEnd(word) && slot_number == 16) {
+            else if (decoder::Decoder::LightChannelEnd(word) && slot_number == light_slot_) {
                 read_light_channel = false;
             }
             else if (read_light_channel) {

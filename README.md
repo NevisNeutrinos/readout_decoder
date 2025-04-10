@@ -31,7 +31,7 @@ Then the decoder can be used from python such as pandas
 import decoder_bindings
 import pandas as pd
 
-process = decoder_bindings.ProcessEvents()
+process = decoder_bindings.ProcessEvents(light_slot=14)
 
 test_file = "/path/to/file/pGRAMS_bin_X.dat"
 process.open_file(test_file)

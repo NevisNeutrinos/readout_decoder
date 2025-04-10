@@ -16,7 +16,7 @@ namespace py = pybind11;
 
 class ProcessEvents {
 public:
-    ProcessEvents();
+    explicit ProcessEvents(uint16_t light_slot);
     ~ProcessEvents();
 
     bool OpenFile(const std::string &file_name);
@@ -85,6 +85,7 @@ private:
     size_t event_number_ = 0;
     size_t charge_channel_number_ = 0;
     size_t light_roi_number_ = 0;
+    uint16_t light_slot_ = 0;
 
     std::array<std::array<uint16_t, 595>, 64> charge_adc_arr_{};
     std::vector<std::vector<uint16_t>> charge_adc_{};
