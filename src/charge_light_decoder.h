@@ -87,7 +87,7 @@ namespace decoder {
         const uint16_t pad1 : 4;
         const uint16_t header_pack_9 : 4;
 
-        uint32_t trig_sample_number() const { return ((trig_sample_number_upper << 4) & 0xF00) | (trig_sample_number_lower & 0xFF); }
+        uint32_t trig_sample_number() const { return ((trig_sample_number_upper << 8) & 0xF00) | (trig_sample_number_lower & 0xFF); }
         uint32_t trig_frame_number() const { return (trig_frame_number_lower & 0xF); }
     };
 
