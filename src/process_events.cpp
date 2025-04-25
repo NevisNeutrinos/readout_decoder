@@ -238,7 +238,7 @@ void ProcessEvents::FillFemDict() {
 }
 
 py::array_t<uint16_t> ProcessEvents::ExtReconstructLightWaveforms(uint16_t channel, py::array_t<uint16_t> &channels,
-    py::array_t<uint32_t> &samples, py::array_t<uint32_t> &frames, py::array_t<uint16_t> &adc_words) {
+    py::array_t<uint32_t> &samples, py::array_t<uint32_t> &frames, py::array_t<uint16_t> &adc_words, uint16_t time_size) {
 
     constexpr int samples_per_frame = 255 * 32; // timesize * 32MHz
     std::array<uint16_t, 4 * samples_per_frame> channel_full_waveform{};
@@ -274,7 +274,8 @@ py::array_t<uint16_t> ProcessEvents::ExtReconstructLightWaveforms(uint16_t chann
     return to_numpy_array_1d(channel_full_waveform);
 }
 
-py::array_t<double> ProcessEvents::ExtReconstructLightAxis(uint32_t trig_frame, uint32_t trig_sample, py::array_t<uint32_t> &frames) {
+py::array_t<double> ProcessEvents::ExtReconstructLightAxis(uint32_t trig_frame, uint32_t trig_sample,
+    py::array_t<uint32_t> &frames, uint16_t time_size) {
     constexpr int samples_per_frame = 255 * 32; // timesize * 32MHz
     constexpr double light_sample_interval = 15.625;
 

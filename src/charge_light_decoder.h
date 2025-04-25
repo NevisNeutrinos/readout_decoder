@@ -39,17 +39,17 @@ namespace decoder {
 
     // header 2
     struct FEMHeader2 {
-        const uint16_t num_adc_words_upper : 12;
+        const uint32_t num_adc_words_upper : 12;
         const uint16_t header_pack_0 : 4;
         const uint16_t num_adc_words_lower : 12;
         const uint16_t header_pack_1 : 4;
-
+        // Make sure the upper word is large enough to hold 12b shifted up by 12b, i.e. must be >=24b
         uint32_t num_adc_words() const { return ((num_adc_words_upper << 12) & 0xFFF000) | (num_adc_words_lower & 0xFFF); }
     };
 
     // header 3
     struct FEMHeader3 {
-        const uint16_t event_number_upper : 12;
+        const uint32_t event_number_upper : 12;
         const uint16_t header_pack_2 : 4;
         const uint16_t event_number_lower : 12;
         const uint16_t header_pack_3 : 4;
@@ -59,7 +59,7 @@ namespace decoder {
 
     // header 4 FIXME this should be trigger frame
      struct FEMHeader4 {
-        const uint16_t frame_number_upper : 12;
+        const uint32_t frame_number_upper : 12;
         const uint16_t header_pack_4 : 4;
         const uint16_t frame_number_lower : 12;
         const uint16_t header_pack_5 : 4;
@@ -69,7 +69,7 @@ namespace decoder {
 
     // header 5
     struct FEMHeader5 {
-        const uint16_t checksum_upper : 12;
+        const uint32_t checksum_upper : 12;
         const uint16_t header_pack_6 : 4;
         const uint16_t checksum_lower : 12;
         const uint16_t header_pack_7 : 4;
@@ -102,7 +102,7 @@ namespace decoder {
     };
 
     struct LightHeader2 {
-        const uint16_t sample_num_upper : 5;
+        const uint32_t sample_num_upper : 5;
         const uint16_t frame_num : 3;
         const uint16_t pad0 : 8;
     };
@@ -206,7 +206,7 @@ namespace decoder {
         // Header 5
         uint32_t GetCheckSum() const { return fem_header5_t.checksum(); }
         // Header 6
-        uint16_t GetTriggerSample() const { return fem_header6_t.trig_sample_number(); }
+        uint32_t GetTriggerSample() const { return fem_header6_t.trig_sample_number(); }
         uint32_t GetTriggerFrameNumber() const;
 
         // Charge & Light ADC words
