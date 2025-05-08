@@ -6,9 +6,6 @@
 #include "charge_light_decoder.h"
 #include <cerrno>
 
-#ifdef USE_PYBIND11
-    #include "process_events_py.h"
-#endif
 
 ProcessEvents::ProcessEvents(const uint16_t light_slot): charge_light_decoder_(nullptr), light_slot_(light_slot) {
     charge_light_decoder_ = std::make_unique<decoder::Decoder>();

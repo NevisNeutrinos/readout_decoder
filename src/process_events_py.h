@@ -10,10 +10,6 @@
 
 namespace py = pybind11;
 
-    // For each FEM fill a python dictionary
-    py::dict event_dict_;
-    static constexpr size_t num_light_channels_ = 32;
-
     // Convert 1D,2D std::array and std::vector to a NumPy array
     template <typename T>
     static py::array_t<T> vector_to_numpy_array_1d(const std::vector<T>& vec) {
@@ -50,8 +46,8 @@ namespace py = pybind11;
         return py::array_t<uint16_t>({M, N}, &arr[0][0]);
     }
 
-    pybind11::dict GetEventDict() { return event_dict_; };
-    py::array_t<double> ReconstructLightAxis();
+//    pybind11::dict GetEventDict() { return event_dict_; };
+//    py::array_t<double> ReconstructLightAxis();
 //    py::array_t<uint16_t> ExtReconstructLightWaveforms(uint16_t channel, py::array_t<uint16_t> &channels,
 //    py::array_t<uint32_t> &samples, py::array_t<uint32_t> &frames, py::array_t<uint16_t> &adc_words, uint16_t time_size);
 //    py::array_t<double> ExtReconstructLightAxis(uint32_t trig_frame, uint32_t trig_sample, py::array_t<uint32_t> &frames, uint16_t time_size);

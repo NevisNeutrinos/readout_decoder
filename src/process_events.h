@@ -14,6 +14,10 @@
 //
 // namespace py = pybind11;
 
+#ifdef USE_PYBIND11
+    #include "process_events_py.h"
+#endif
+
 struct EventStruct {
     // Charge
     std::vector<uint16_t> charge_channel;
@@ -65,8 +69,15 @@ public:
     void SetFemData();
     void ClearFemVectors();
     void ReconstructLightWaveforms();
-    // pybind11::dict GetEventDict() { return event_dict_; };
-    // py::array_t<double> ReconstructLightAxis();
+
+#ifdef USE_PYBIND11
+    // For each FEM fill a python dictionary
+    py::dict event_dict_;
+
+    pybind11::dict GetEventDict() { return event_dict_; };
+    pybind11::array_t<double> ReconstructLightAxis();
+#endif
+
     // py::array_t<uint16_t> ExtReconstructLightWaveforms(uint16_t channel, py::array_t<uint16_t> &channels,
     // py::array_t<uint32_t> &samples, py::array_t<uint32_t> &frames, py::array_t<uint16_t> &adc_words, uint16_t time_size);
     // py::array_t<double> ExtReconstructLightAxis(uint32_t trig_frame, uint32_t trig_sample, py::array_t<uint32_t> &frames,
