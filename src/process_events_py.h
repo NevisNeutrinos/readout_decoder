@@ -46,10 +46,4 @@ namespace py = pybind11;
         return py::array_t<uint16_t>({M, N}, &arr[0][0]);
     }
 
-//    pybind11::dict GetEventDict() { return event_dict_; };
-//    py::array_t<double> ReconstructLightAxis();
-//    py::array_t<uint16_t> ExtReconstructLightWaveforms(uint16_t channel, py::array_t<uint16_t> &channels,
-//    py::array_t<uint32_t> &samples, py::array_t<uint32_t> &frames, py::array_t<uint16_t> &adc_words, uint16_t time_size);
-//    py::array_t<double> ExtReconstructLightAxis(uint32_t trig_frame, uint32_t trig_sample, py::array_t<uint32_t> &frames, uint16_t time_size);
-
 #endif //PROCESS_EVENTS_PY_H
