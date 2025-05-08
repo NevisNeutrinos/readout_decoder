@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.30)
 project(decoder_bindings)
 
 set(CMAKE_CXX_STANDARD 17)
+add_compile_definitions(USE_PYBIND11=1)
 
 find_package(pybind11 CONFIG REQUIRED)
 #add_subdirectory(extern/pybind11)
