@@ -142,6 +142,9 @@ bool ProcessEvents::GetEvent() {
                     light_adc_.push_back(charge_light_decoder_->GetAdcWords());
                     charge_light_decoder_->ResetAdcWordVector();
                     light_channel_.push_back(charge_light_decoder_->GetLightChannel());
+                    light_trigger_id_.push_back(charge_light_decoder_->GetLightTriggerId());
+                    light_header_tag_.push_back(charge_light_decoder_->GetLightHeaderTag());
+                    light_word_tag_.push_back(charge_light_decoder_->GetLightWordTag());
                     light_frame_number_.push_back(charge_light_decoder_->GetLightFrameNumber());
                     light_sample_number_.push_back(charge_light_decoder_->GetLightSampleNumber());
                     light_word_header_done = false;
@@ -179,6 +182,9 @@ void ProcessEvents::ClearFemVectors() {
     charge_channel_.clear();
     charge_adc_.clear();
     light_channel_.clear();
+    light_trigger_id_.clear();
+    light_header_tag_.clear();
+    light_word_tag_.clear();
     light_adc_.clear();
     light_frame_number_.clear();
     light_sample_number_.clear();
@@ -226,6 +232,9 @@ void ProcessEvents::FillFemDict() {
     fem_dict_["trigger_sample"] = vector_to_numpy_array_1d(trigger_sample_v_);
     // Light
     fem_dict_["light_channel"] = vector_to_numpy_array_1d(light_channel_);
+    fem_dict_["light_trigger_id"] = vector_to_numpy_array_1d(light_trigger_id_);
+    fem_dict_["light_header_tag"] = vector_to_numpy_array_1d(light_header_tag_);
+    fem_dict_["light_word_tag"] = vector_to_numpy_array_1d(light_word_tag_);
     fem_dict_["light_frame_number"] = vector_to_numpy_array_1d(light_frame_number_);
     fem_dict_["light_readout_sample"] = vector_to_numpy_array_1d(light_sample_number_);
     fem_dict_["light_adc_words"] = vector_to_numpy_array_2d(light_adc_);
@@ -246,6 +255,9 @@ void ProcessEvents::FillFemDict() {
     event_struct_.check_sum = std::move(check_sum_v_);
     event_struct_.trigger_sample = std::move(trigger_sample_v_);
     event_struct_.light_channel = std::move(light_channel_);
+    light_trigger_id_ = std::move(light_trigger_id_);
+    light_header_tag_ = std::move(light_header_tag_);
+    light_word_tag_ = std::move(light_word_tag_);
     event_struct_.light_frame_number = std::move(light_frame_number_);
     event_struct_.light_sample_number = std::move(light_sample_number_);
     event_struct_.light_adc = std::move(light_adc_);

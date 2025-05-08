@@ -218,6 +218,9 @@ namespace decoder {
         // Light headers
         // Header 1
         uint16_t GetLightChannel() const { return light_header1_t.channel; }
+        uint8_t GetLightTriggerId() const { return light_header1_t.id; }
+        uint8_t GetLightHeaderTag() const { return light_header1_t.header_tag; }
+        uint8_t GetLightWordTag() const { return light_header1_t.word_tag; }
         // Header 2 & 3
         uint32_t GetLightFrameNumber() const;
         uint32_t GetLightSampleNumber() const {

@@ -20,6 +20,9 @@ struct EventStruct {
     std::vector<std::vector<uint16_t>> charge_adc;
     // Light
     std::vector<uint16_t> light_channel;
+    std::vector<uint8_t> light_trigger_id;
+    std::vector<uint8_t> light_header_tag;
+    std::vector<uint8_t> light_word_tag;
     std::vector<uint32_t> light_frame_number;
     std::vector<uint16_t> light_sample_number; // 32b
     std::vector<std::vector<uint16_t>> light_adc;
@@ -38,6 +41,9 @@ struct EventStruct {
         charge_adc.clear();
         // Light
         light_channel.clear();
+        light_trigger_id.clear();
+        light_header_tag.clear();
+        light_word_tag.clear();
         light_frame_number.clear();
         light_sample_number.clear(); // 32b
         light_adc.clear();
@@ -96,6 +102,9 @@ private:
     std::vector<std::vector<uint16_t>> light_adc_{};
     std::vector<uint16_t> charge_channel_{};
     std::vector<uint16_t> light_channel_{};
+    std::vector<uint8_t> light_trigger_id_{};
+    std::vector<uint8_t> light_header_tag_{};
+    std::vector<uint8_t> light_word_tag_{};
     std::vector<uint32_t> light_frame_number_{};
     std::vector<uint16_t> light_sample_number_{}; // 32b
     std::vector<std::vector<uint16_t>> channel_full_waveform_{};
