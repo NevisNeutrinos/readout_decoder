@@ -1,7 +1,6 @@
 #include <iostream>
-#include <pybind11/embed.h>
 #include "src/process_events.h"
-
+#include <pybind11/embed.h>
 
 int main() {
 

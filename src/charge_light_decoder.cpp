@@ -2,6 +2,7 @@
 // Created by Jon Sensenig on 3/12/25.
 //
 #include "charge_light_decoder.h"
+#include <iostream>
 
 namespace decoder {
 

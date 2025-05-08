@@ -7,7 +7,9 @@
 
 #include <fstream>
 #include <cstdint>
-#include <iostream>
+#include <vector>
+#include <array>
+#include <cstring>
 
 namespace decoder {
 
@@ -28,64 +30,64 @@ namespace decoder {
 
     // header 1
     struct FEMHeader1 {
-        const uint16_t event_start : 16;
-        const uint16_t slot_number : 5; // First 5 bits
-        const uint16_t fem_id : 4;
-        const uint16_t test : 1;
-        const uint16_t overflow : 1;
-        const uint16_t full : 1;
-        const uint16_t header_start_1 : 4;
+        uint16_t event_start : 16;
+        uint16_t slot_number : 5; // First 5 bits
+        uint16_t fem_id : 4;
+        uint16_t test : 1;
+        uint16_t overflow : 1;
+        uint16_t full : 1;
+        uint16_t header_start_1 : 4;
     };
 
     // header 2
     struct FEMHeader2 {
-        const uint32_t num_adc_words_upper : 12;
-        const uint16_t header_pack_0 : 4;
-        const uint16_t num_adc_words_lower : 12;
-        const uint16_t header_pack_1 : 4;
+        uint32_t num_adc_words_upper : 12;
+        uint16_t header_pack_0 : 4;
+        uint16_t num_adc_words_lower : 12;
+        uint16_t header_pack_1 : 4;
         // Make sure the upper word is large enough to hold 12b shifted up by 12b, i.e. must be >=24b
         uint32_t num_adc_words() const { return ((num_adc_words_upper << 12) & 0xFFF000) | (num_adc_words_lower & 0xFFF); }
     };
 
     // header 3
     struct FEMHeader3 {
-        const uint32_t event_number_upper : 12;
-        const uint16_t header_pack_2 : 4;
-        const uint16_t event_number_lower : 12;
-        const uint16_t header_pack_3 : 4;
+        uint32_t event_number_upper : 12;
+        uint16_t header_pack_2 : 4;
+        uint16_t event_number_lower : 12;
+        uint16_t header_pack_3 : 4;
 
         uint32_t event_number() const { return ((event_number_upper << 12) & 0xFFF000) | (event_number_lower & 0xFFF); }
     };
 
     // header 4 FIXME this should be trigger frame
      struct FEMHeader4 {
-        const uint32_t frame_number_upper : 12;
-        const uint16_t header_pack_4 : 4;
-        const uint16_t frame_number_lower : 12;
-        const uint16_t header_pack_5 : 4;
+        uint32_t frame_number_upper : 12;
+        uint16_t header_pack_4 : 4;
+        uint16_t frame_number_lower : 12;
+        uint16_t header_pack_5 : 4;
 
         uint32_t event_frame_number() const { return ((frame_number_upper << 12) & 0xFFF000) | (frame_number_lower & 0xFFF); }
     };
 
     // header 5
     struct FEMHeader5 {
-        const uint32_t checksum_upper : 12;
-        const uint16_t header_pack_6 : 4;
-        const uint16_t checksum_lower : 12;
-        const uint16_t header_pack_7 : 4;
+        uint32_t checksum_upper : 12;
+        uint16_t header_pack_6 : 4;
+        uint16_t checksum_lower : 12;
+        uint16_t header_pack_7 : 4;
 
         uint32_t checksum() const { return ((checksum_upper << 12) & 0xFFF000) | (checksum_lower & 0xFFF); }
     };
 
     // header 6
     struct FEMHeader6 {
-        const uint16_t trig_sample_number_upper : 4;
-        const uint16_t trig_frame_number_lower : 4;
-        const uint16_t pad0 : 4;
-        const uint16_t header_pack_8 : 4;
-        const uint16_t trig_sample_number_lower : 8;
-        const uint16_t pad1 : 4;
-        const uint16_t header_pack_9 : 4;
+        uint16_t trig_sample_number_upper : 4;
+        uint16_t trig_frame_number_lower : 4;
+        uint16_t pad0 : 4;
+        uint16_t header_pack_8 : 4;
+        uint16_t trig_sample_number_lower : 8;
+        uint16_t pad1 : 4;
+        uint16_t header_pack_9 : 4;
 
         uint32_t trig_sample_number() const { return ((trig_sample_number_upper << 8) & 0xF00) | (trig_sample_number_lower & 0xFF); }
         uint32_t trig_frame_number() const { return (trig_frame_number_lower & 0xF); }
@@ -94,28 +96,28 @@ namespace decoder {
 
     // Define the structure for FEM Header
     struct LightHeader1 {
-        const uint16_t channel : 6;
-        const uint16_t pad0 : 3;
-        const uint16_t id : 3;
-        const uint16_t header_tag : 2;
-        const uint16_t word_tag: 2;
+        uint16_t channel : 6;
+        uint16_t pad0 : 3;
+        uint16_t id : 3;
+        uint16_t header_tag : 2;
+        uint16_t word_tag: 2;
     };
 
     struct LightHeader2 {
-        const uint32_t sample_num_upper : 5;
-        const uint16_t frame_num : 3;
-        const uint16_t pad0 : 8;
+        uint32_t sample_num_upper : 5;
+        uint16_t frame_num : 3;
+        uint16_t pad0 : 8;
     };
 
     struct LightHeader3 {
-        const uint16_t sample_num_lower : 12;
-        const uint16_t pad0 : 4;
+        uint16_t sample_num_lower : 12;
+        uint16_t pad0 : 4;
     };
 
     // General form for the ADC words, both charge and light
     struct AdcWord {
-        const uint16_t adc_word : 12;
-        const uint16_t pad0 : 4;
+        uint16_t adc_word : 12;
+        uint16_t pad0 : 4;
 
         uint16_t get_adc1() const { return adc_word; }
     };

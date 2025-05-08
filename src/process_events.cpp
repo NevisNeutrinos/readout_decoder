@@ -6,12 +6,14 @@
 #include "charge_light_decoder.h"
 #include <cerrno>
 
-namespace py = pybind11;
+#ifdef USE_PYBIND11
+    #include "process_events_py.h"
+#endif
 
 ProcessEvents::ProcessEvents(const uint16_t light_slot): charge_light_decoder_(nullptr), light_slot_(light_slot) {
-    charge_light_decoder_ = std::make_unique<decoder::Decoder>(); //new decoder::Decoder;
-    event_dict_["Light"] = py::dict();
-    event_dict_["Charge"] = py::dict();
+    charge_light_decoder_ = std::make_unique<decoder::Decoder>();
+    // event_dict_["Light"] = py::dict();
+    // event_dict_["Charge"] = py::dict();
     channel_full_waveform_.reserve(num_light_channels_);
     channel_full_axis_.reserve(num_light_channels_);
 }
@@ -22,7 +24,7 @@ ProcessEvents::~ProcessEvents() {
         std::cout << "Closing data file!" << std::endl;
         file_buffer_.reset(nullptr);
         fclose(data_file_);
-        delete[] data_file_;
+        //delete[] data_file_; // FIXME memory freed twice!
         data_file_ = nullptr;
     }
     charge_light_decoder_.reset(nullptr);
@@ -36,7 +38,7 @@ bool ProcessEvents::OpenFile(const std::string &file_name) {
         file_buffer_.reset(nullptr);
         std::cout << "Closing data file!" << std::endl;
         fclose(data_file_);
-        delete[] data_file_;
+        //delete[] data_file_; // FIXME memory freed twice!
         data_file_ = nullptr;
     }
 
@@ -194,8 +196,7 @@ void ProcessEvents::ClearFemVectors() {
     trigger_sample_v_.clear();
 }
 
-bool ProcessEvents::GetNumEvents(const int num_events) {
-
+bool ProcessEvents::GetNumEvents(const size_t num_events) {
     size_t event_count = 0;
     while (GetEvent() && num_events > event_count) {
         event_count++;
@@ -209,7 +210,7 @@ bool ProcessEvents::GetNumEvents(const int num_events) {
 }
 
 void ProcessEvents::FillFemDict() {
-    pybind11::dict fem_dict_;
+
     // Clear and then init the vectors
     channel_full_waveform_.clear();
     channel_full_axis_.clear();
@@ -217,6 +218,9 @@ void ProcessEvents::FillFemDict() {
         channel_full_waveform_.emplace_back();
         channel_full_axis_.emplace_back();
     }
+
+#ifdef USE_PYBIND11
+    pybind11::dict fem_dict_;
     // FEM header
     fem_dict_["slot_number"] = vector_to_numpy_array_1d(slot_number_v_);
     fem_dict_["num_adc_word"] = vector_to_numpy_array_1d(num_adc_word_v_);
@@ -235,106 +239,126 @@ void ProcessEvents::FillFemDict() {
     fem_dict_["charge_adc_words"] = vector_to_numpy_array_2d(charge_adc_);
 
     event_dict_ = fem_dict_;
+
+#else
+
+    event_struct_.clear_event();
+    event_struct_.slot_number = std::move(slot_number_v_);
+    event_struct_.num_adc_word = std::move(num_adc_word_v_);
+    event_struct_.event_number = std::move(event_number_v_);
+    event_struct_.event_frame_number = std::move(event_frame_number_v_);
+    event_struct_.trigger_frame_number = std::move(trigger_frame_number_v_);
+    event_struct_.check_sum = std::move(check_sum_v_);
+    event_struct_.trigger_sample = std::move(trigger_sample_v_);
+    event_struct_.light_channel = std::move(light_channel_);
+    event_struct_.light_frame_number = std::move(light_frame_number_);
+    event_struct_.light_sample_number = std::move(light_sample_number_);
+    event_struct_.light_adc = std::move(light_adc_);
+    event_struct_.charge_channel = std::move(charge_channel_);
+    event_struct_.charge_adc = std::move(charge_adc_);
+
+#endif
 }
 
-py::array_t<uint16_t> ProcessEvents::ExtReconstructLightWaveforms(uint16_t channel, py::array_t<uint16_t> &channels,
-    py::array_t<uint32_t> &samples, py::array_t<uint32_t> &frames, py::array_t<uint16_t> &adc_words, uint16_t time_size) {
 
-    constexpr int samples_per_frame = 255 * 32; // timesize * 32MHz
-    std::array<uint16_t, 4 * samples_per_frame> channel_full_waveform{};
+// py::array_t<uint16_t> ExtReconstructLightWaveforms(uint16_t channel, py::array_t<uint16_t> &channels,
+//     py::array_t<uint32_t> &samples, py::array_t<uint32_t> &frames, py::array_t<uint16_t> &adc_words, uint16_t time_size) {
+//
+//     constexpr int samples_per_frame = 255 * 32; // timesize * 32MHz
+//     std::array<uint16_t, 4 * samples_per_frame> channel_full_waveform{};
+//
+//     for (auto &sample : channel_full_waveform) { sample = 2048; }
+//
+//     //######################
+//     // Get buffer info
+//     const py::buffer_info buf_ch = channels.request();
+//     const py::buffer_info buf_sample = samples.request();
+//     const py::buffer_info buf_frame = frames.request();
+//     const py::buffer_info buf_adc_word = adc_words.request();
+//
+//     // Access data
+//     auto* channel_ptr = static_cast<uint16_t*>(buf_ch.ptr);
+//     auto* sample_ptr = static_cast<uint32_t*>(buf_sample.ptr);
+//     auto* frame_ptr = static_cast<uint32_t*>(buf_frame.ptr);
+//     auto* adc_word_ptr = static_cast<uint16_t*>(buf_adc_word.ptr);
+//     //########################
+//
+//     const auto min_it = std::min_element(frame_ptr, frame_ptr + buf_frame.size);
+//     uint32_t min_frame_number = min_it != (frame_ptr + buf_frame.size) ? *min_it : 0;
+//
+//     for (size_t roi = 0; roi < buf_ch.size; roi++) {
+//         if (channel_ptr[roi] != channel) continue;
+//         size_t frame_offset = (frame_ptr[roi] - min_frame_number) * samples_per_frame;
+//         size_t start_idx = sample_ptr[roi] + frame_offset;
+//         size_t end_idx = std::min((start_idx + buf_adc_word.shape[1]), channel_full_waveform.size());
+//         for (size_t idx = start_idx; idx < end_idx; idx++) {
+//             channel_full_waveform.at(idx) = adc_word_ptr[(roi*buf_adc_word.shape[1]) + (idx - start_idx)];
+//         }
+//     }
+//     return to_numpy_array_1d(channel_full_waveform);
+// }
 
-    for (auto &sample : channel_full_waveform) { sample = 2048; }
+// py::array_t<double> ExtReconstructLightAxis(uint32_t trig_frame, uint32_t trig_sample,
+//     py::array_t<uint32_t> &frames, uint16_t time_size) {
+//     constexpr int samples_per_frame = 255 * 32; // timesize * 32MHz
+//     constexpr double light_sample_interval = 15.625;
+//
+//     //######################
+//     // Get buffer info
+//     const py::buffer_info buf_frame = frames.request();
+//     auto* frame_ptr = static_cast<uint32_t*>(buf_frame.ptr);
+//
+//     const auto min_it = std::min_element(frame_ptr, frame_ptr + buf_frame.size);
+//     uint16_t min_frame_number = min_it != (frame_ptr + buf_frame.size) ? *min_it : 0;
+//
+//     const double frame_offset = (trig_frame - min_frame_number) * light_sample_interval;
+//     const double trigger_index = frame_offset + (trig_sample * 32);
+//
+//     std::array<double, 4 * samples_per_frame> light_axis{};
+//     double tick_idx = 0;
+//     for (auto &tick : light_axis) {
+//         tick = (tick_idx - trigger_index) * light_sample_interval;
+//         tick_idx++;
+//     }
+//     return py::array_t(light_axis.size(), &light_axis[0]);
+// }
 
-    //######################
-    // Get buffer info
-    const py::buffer_info buf_ch = channels.request();
-    const py::buffer_info buf_sample = samples.request();
-    const py::buffer_info buf_frame = frames.request();
-    const py::buffer_info buf_adc_word = adc_words.request();
+// py::array_t<double> ReconstructLightAxis() {
+//     constexpr int samples_per_frame = 255 * 32; // timesize * 32MHz
+//     constexpr double light_sample_interval = 15.625;
+//
+//     const auto min_it = std::min_element(light_frame_number_.begin(), light_frame_number_.end());
+//     uint32_t min_frame_number = min_it != light_frame_number_.end() ? *min_it : 0;
+//
+//     const double frame_offset = (charge_light_decoder_->GetTriggerFrameNumber() - min_frame_number) * light_sample_interval;
+//     const double trigger_index = frame_offset + (charge_light_decoder_->GetTriggerSample() * 32);
+//
+//     std::array<double, 10 * samples_per_frame> light_axis{};
+//     double tick_idx = 0;
+//     for (auto &tick : light_axis) {
+//         tick = (tick_idx - trigger_index) * light_sample_interval;
+//         tick_idx++;
+//     }
+//     return py::array_t(light_axis.size(), &light_axis[0]);
+// }
 
-    // Access data
-    auto* channel_ptr = static_cast<uint16_t*>(buf_ch.ptr);
-    auto* sample_ptr = static_cast<uint32_t*>(buf_sample.ptr);
-    auto* frame_ptr = static_cast<uint32_t*>(buf_frame.ptr);
-    auto* adc_word_ptr = static_cast<uint16_t*>(buf_adc_word.ptr);
-    //########################
-
-    const auto min_it = std::min_element(frame_ptr, frame_ptr + buf_frame.size);
-    uint32_t min_frame_number = min_it != (frame_ptr + buf_frame.size) ? *min_it : 0;
-
-    for (size_t roi = 0; roi < buf_ch.size; roi++) {
-        if (channel_ptr[roi] != channel) continue;
-        size_t frame_offset = (frame_ptr[roi] - min_frame_number) * samples_per_frame;
-        size_t start_idx = sample_ptr[roi] + frame_offset;
-        size_t end_idx = std::min((start_idx + buf_adc_word.shape[1]), channel_full_waveform.size());
-        for (size_t idx = start_idx; idx < end_idx; idx++) {
-            channel_full_waveform.at(idx) = adc_word_ptr[(roi*buf_adc_word.shape[1]) + (idx - start_idx)];
-        }
-    }
-    return to_numpy_array_1d(channel_full_waveform);
-}
-
-py::array_t<double> ProcessEvents::ExtReconstructLightAxis(uint32_t trig_frame, uint32_t trig_sample,
-    py::array_t<uint32_t> &frames, uint16_t time_size) {
-    constexpr int samples_per_frame = 255 * 32; // timesize * 32MHz
-    constexpr double light_sample_interval = 15.625;
-
-    //######################
-    // Get buffer info
-    const py::buffer_info buf_frame = frames.request();
-    auto* frame_ptr = static_cast<uint32_t*>(buf_frame.ptr);
-
-    const auto min_it = std::min_element(frame_ptr, frame_ptr + buf_frame.size);
-    uint16_t min_frame_number = min_it != (frame_ptr + buf_frame.size) ? *min_it : 0;
-
-    const double frame_offset = (trig_frame - min_frame_number) * light_sample_interval;
-    const double trigger_index = frame_offset + (trig_sample * 32);
-
-    std::array<double, 4 * samples_per_frame> light_axis{};
-    double tick_idx = 0;
-    for (auto &tick : light_axis) {
-        tick = (tick_idx - trigger_index) * light_sample_interval;
-        tick_idx++;
-    }
-    return py::array_t(light_axis.size(), &light_axis[0]);
-}
-
-py::array_t<double> ProcessEvents::ReconstructLightAxis() {
-    constexpr int samples_per_frame = 255 * 32; // timesize * 32MHz
-    constexpr double light_sample_interval = 15.625;
-
-    const auto min_it = std::min_element(light_frame_number_.begin(), light_frame_number_.end());
-    uint32_t min_frame_number = min_it != light_frame_number_.end() ? *min_it : 0;
-
-    const double frame_offset = (charge_light_decoder_->GetTriggerFrameNumber() - min_frame_number) * light_sample_interval;
-    const double trigger_index = frame_offset + (charge_light_decoder_->GetTriggerSample() * 32);
-
-    std::array<double, 10 * samples_per_frame> light_axis{};
-    double tick_idx = 0;
-    for (auto &tick : light_axis) {
-        tick = (tick_idx - trigger_index) * light_sample_interval;
-        tick_idx++;
-    }
-    return py::array_t(light_axis.size(), &light_axis[0]);
-}
-
-void ProcessEvents::ReconstructLightWaveforms() {
-    constexpr size_t samples_per_frame = 255 * 32; // timesize * 32MHz
-
-    const auto min_it = std::min_element(light_frame_number_.begin(), light_frame_number_.end());
-    uint32_t min_frame_number = min_it != light_frame_number_.end() ? *min_it : 0;
-
-    for (size_t roi = 0; roi < light_channel_.size(); roi++) {
-        size_t channel = light_channel_.at(roi);
-        if (channel > 31) continue;
-        size_t frame_offset = (light_frame_number_.at(roi) - min_frame_number) * samples_per_frame;
-        size_t start_idx = light_sample_number_.at(roi) + frame_offset;
-        size_t end_idx = std::min((start_idx + light_adc_.at(roi).size()), samples_per_frame*8);
-        for (size_t idx = start_idx; idx < end_idx; idx++) {
-            // channel_full_waveform.at(channel).at(idx) = light_adc_.at(roi).at(idx - start_idx);
-            channel_full_waveform_[channel].push_back(light_adc_.at(roi).at(idx - start_idx));
-            channel_full_axis_[channel].push_back(idx);
-        }
-    }
-}
+// void ProcessEvents::ReconstructLightWaveforms() {
+//     constexpr size_t samples_per_frame = 255 * 32; // timesize * 32MHz
+//
+//     const auto min_it = std::min_element(light_frame_number_.begin(), light_frame_number_.end());
+//     uint32_t min_frame_number = min_it != light_frame_number_.end() ? *min_it : 0;
+//
+//     for (size_t roi = 0; roi < light_channel_.size(); roi++) {
+//         size_t channel = light_channel_.at(roi);
+//         if (channel > 31) continue;
+//         size_t frame_offset = (light_frame_number_.at(roi) - min_frame_number) * samples_per_frame;
+//         size_t start_idx = light_sample_number_.at(roi) + frame_offset;
+//         size_t end_idx = std::min((start_idx + light_adc_.at(roi).size()), samples_per_frame*8);
+//         for (size_t idx = start_idx; idx < end_idx; idx++) {
+//             // channel_full_waveform.at(channel).at(idx) = light_adc_.at(roi).at(idx - start_idx);
+//             channel_full_waveform_[channel].push_back(light_adc_.at(roi).at(idx - start_idx));
+//             channel_full_axis_[channel].push_back(idx);
+//         }
+//     }
+// }
 
