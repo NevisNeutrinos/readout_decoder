@@ -19,7 +19,7 @@ namespace py = pybind11;
     // template <typename T>
     static py::array_t<uint16_t> vector_to_numpy_array_2d(const std::vector<std::vector<uint16_t>>& vec) {
         if (vec.empty()) {
-            return py::array_t<uint16_t>({0, 0});  // Return empty array if input is empty
+            return py::array_t<uint16_t>({0});  // Return empty array if input is empty
         }
 
         size_t rows = vec.size();
