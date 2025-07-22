@@ -104,6 +104,7 @@ bool ProcessEvents::GetEvent() {
             // 32b word & 0xFFFF is 1R the 1st word
             // (32b word >> 16) & 0xFFFF is 1L the 2nd word
             uint16_t word = j == 0 ? word_32 & 0xFFFF : (word_32 >> 16) & 0xFFFF;
+            if (word == 0x0) continue;
 
             if (decoder::Decoder::ChargeChannelStart(word) && !read_charge_channel && slot_number != light_slot_) {
                 // std::cout << "ChargeChannel Start " << (word & 0x3F) << "\n";
