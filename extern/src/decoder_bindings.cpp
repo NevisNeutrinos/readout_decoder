@@ -10,8 +10,8 @@
 
 namespace py = pybind11;
 
-py::array_t<uint16_t> ExtReconstructLightWaveforms(uint16_t channel, py::array_t<uint16_t> &channels,
-    py::array_t<uint32_t> &samples, py::array_t<uint32_t> &frames, py::array_t<uint16_t> &adc_words, uint16_t time_size) {
+py::array_t<uint16_t> ExtReconstructLightWaveforms(uint16_t channel, py::array_t<uint16_t> &channels, double min_frame_number,
+    py::array_t<double> &samples, py::array_t<double> &frames, py::array_t<uint16_t> &adc_words, uint16_t time_size) {
 
     constexpr int samples_per_frame = 255 * 32; // timesize * 32MHz
     std::array<uint16_t, 4 * samples_per_frame> channel_full_waveform{};
@@ -27,13 +27,13 @@ py::array_t<uint16_t> ExtReconstructLightWaveforms(uint16_t channel, py::array_t
 
     // Access data
     auto* channel_ptr = static_cast<uint16_t*>(buf_ch.ptr);
-    auto* sample_ptr = static_cast<uint32_t*>(buf_sample.ptr);
-    auto* frame_ptr = static_cast<uint32_t*>(buf_frame.ptr);
+    auto* sample_ptr = static_cast<double*>(buf_sample.ptr);
+    auto* frame_ptr = static_cast<double*>(buf_frame.ptr);
     auto* adc_word_ptr = static_cast<uint16_t*>(buf_adc_word.ptr);
     //########################
 
-    const auto min_it = std::min_element(frame_ptr, frame_ptr + buf_frame.size);
-    uint32_t min_frame_number = min_it != (frame_ptr + buf_frame.size) ? *min_it : 0;
+    //const auto min_it = std::min_element(frame_ptr, frame_ptr + buf_frame.size);
+    //double min_frame_number = min_it != (frame_ptr + buf_frame.size) ? *min_it : 0;
 
     for (size_t roi = 0; roi < buf_ch.size; roi++) {
         if (channel_ptr[roi] != channel) continue;
@@ -47,23 +47,28 @@ py::array_t<uint16_t> ExtReconstructLightWaveforms(uint16_t channel, py::array_t
     return to_numpy_array_1d(channel_full_waveform);
 }
 
-py::array_t<double> ExtReconstructLightAxis(uint32_t trig_frame, uint32_t trig_sample,
-    py::array_t<uint32_t> &frames, uint16_t time_size) {
-    constexpr int samples_per_frame = 255 * 32; // timesize * 32MHz
+py::array_t<double> ExtReconstructLightAxis(double trig_frame, double trig_sample_clk64,
+    double min_frame_number, double time_size, bool relative_to_trigger) {
+
+    constexpr double samples_per_frame = 255 * 32; // timesize * 32MHz (64MHz clock ticks)
     constexpr double light_sample_interval = 15.625;
 
     //######################
     // Get buffer info
-    const py::buffer_info buf_frame = frames.request();
-    auto* frame_ptr = static_cast<uint32_t*>(buf_frame.ptr);
+    //const py::buffer_info buf_frame = frames.request();
+    //auto* frame_ptr = static_cast<double*>(buf_frame.ptr);
 
-    const auto min_it = std::min_element(frame_ptr, frame_ptr + buf_frame.size);
-    uint16_t min_frame_number = min_it != (frame_ptr + buf_frame.size) ? *min_it : 0;
+    //const auto min_it = std::min_element(frame_ptr, frame_ptr + buf_frame.size);
+    // double min_frame_number = min_it != (frame_ptr + buf_frame.size) ? *min_it : 0;
 
-    const double frame_offset = (trig_frame - min_frame_number) * light_sample_interval;
-    const double trigger_index = frame_offset + (trig_sample * 32);
+    //const double frame_offset = (trig_frame - min_frame_number) * light_sample_interval;
+    double trigger_index = 0;
+    if (relative_to_trigger) {
+        const double frame_offset = (trig_frame - min_frame_number) * samples_per_frame; // frame(s) to 64MHz clock ticks
+        trigger_index = frame_offset + trig_sample_clk64; // in 64MHz clock ticks
+    }
 
-    std::array<double, 4 * samples_per_frame> light_axis{};
+    std::array<double, 4 * static_cast<size_t>(samples_per_frame)> light_axis{};
     double tick_idx = 0;
     for (auto &tick : light_axis) {
         tick = (tick_idx - trigger_index) * light_sample_interval;
