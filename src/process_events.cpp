@@ -7,7 +7,10 @@
 #include <cerrno>
 
 
-ProcessEvents::ProcessEvents(const uint16_t light_slot): charge_light_decoder_(nullptr), light_slot_(light_slot) {
+ProcessEvents::ProcessEvents(const uint16_t light_slot, bool use_charge_roi, const std::vector<uint16_t> &channel_threshold):
+    use_charge_roi_(use_charge_roi),
+    channel_threshold_(channel_threshold),
+    charge_light_decoder_(nullptr), light_slot_(light_slot) {
     charge_light_decoder_ = std::make_unique<decoder::Decoder>();
     channel_full_waveform_.reserve(num_light_channels_);
     channel_full_axis_.reserve(num_light_channels_);
@@ -112,9 +115,14 @@ bool ProcessEvents::GetEvent() {
             }
             else if (decoder::Decoder::ChargeChannelEnd(word) && read_charge_channel && slot_number != light_slot_) {
                 read_charge_channel = false;
-                charge_adc_.push_back(charge_light_decoder_->GetAdcWords());
+
+                if (use_charge_roi_) {
+                    ChargeRoi(charge_channel_number_++, charge_light_decoder_->GetAdcWords());
+                } else {
+                    charge_adc_.push_back(charge_light_decoder_->GetAdcWords());
+                    charge_channel_.push_back(charge_channel_number_++);
+                }
                 charge_light_decoder_->ResetAdcWordVector();
-                charge_channel_.push_back(charge_channel_number_++);
             }
             else if (read_charge_channel) {
                 charge_light_decoder_->DecodeAdcWord(word);
@@ -167,6 +175,64 @@ bool ProcessEvents::GetEvent() {
     return false;
 }
 
+void ProcessEvents::ChargeRoi(const uint16_t channel, const std::vector<uint16_t> &charge_words) {
+    const size_t pre_samples = 10;
+    const size_t num_samples = 40;
+    const uint16_t thresh = channel_threshold_.at(channel);
+    bool is_roi_window = false;
+    size_t end_idx = 0;
+
+    std::vector<uint16_t> tmp_charge_words;
+    std::vector<uint16_t> tmp_charge_idx;
+
+    // Construct a channel empty vector and note which channel it is
+    // charge_channel_.push_back(channel);
+    // charge_adc_.emplace_back();
+    // charge_adc_idx_.emplace_back();
+
+    // The idea is to find when a channel crosses a threshold based on each channel's measured
+    // baseline and RMS. When the channel goes above threshold M samples before the crossing
+    // are saved and when it goes below threshold N samples are saved after. The absolute index
+    // is also saved so the full waveform can be reconstructed from ROIs.
+    for (size_t sample = 0; sample < charge_words.size(); sample++) {
+        if (charge_words.at(sample) > thresh && !is_roi_window) {
+            // Make sure we don't run off the front of the vector and don't repeat samples that
+            // are from a close pulses.
+            size_t start_idx = (sample < pre_samples) ? 0 : sample - pre_samples;
+            start_idx -= (sample < end_idx + pre_samples + 1) && (sample > pre_samples-1) ? (sample - end_idx) : 0;
+            for (size_t pre = start_idx; pre < sample+1; pre++) {
+                tmp_charge_words.push_back(charge_words.at(pre));
+                tmp_charge_idx.push_back(pre);
+            }
+            is_roi_window = true;
+            end_idx = sample;
+        } else {
+            if (is_roi_window && (sample < end_idx+num_samples)) {
+                tmp_charge_words.push_back(charge_words.at(sample));
+                tmp_charge_idx.push_back(sample);
+                if (sample == (end_idx+num_samples-1)) {
+                    charge_adc_.emplace_back(tmp_charge_words);
+                    charge_adc_idx_.emplace_back(tmp_charge_idx);
+                    charge_channel_.push_back(channel);
+                    tmp_charge_words.clear();
+                    tmp_charge_idx.clear();
+                    is_roi_window = false;
+                    end_idx = sample;
+                }
+            } else {
+                // continue;
+                end_idx = sample;
+            }
+        }
+    }
+    // In case there is a partial ROI
+    if (!tmp_charge_words.empty()) {
+        charge_adc_.emplace_back(tmp_charge_words);
+        charge_adc_idx_.emplace_back(tmp_charge_idx);
+        charge_channel_.push_back(channel);
+    }
+}
+
 void ProcessEvents::SetFemData() {
     slot_number_v_.push_back(charge_light_decoder_->GetSlotNumber());
     event_number_v_.push_back(charge_light_decoder_->GetEventNumber());
@@ -182,6 +248,7 @@ void ProcessEvents::ClearFemVectors() {
     charge_channel_number_ = 0;
     charge_channel_.clear();
     charge_adc_.clear();
+    charge_adc_idx_.clear();
     light_channel_.clear();
     light_trigger_id_.clear();
     light_header_tag_.clear();
@@ -242,6 +309,7 @@ void ProcessEvents::FillFemDict() {
     // Charge
     fem_dict_["charge_channel"] = vector_to_numpy_array_1d(charge_channel_);
     fem_dict_["charge_adc_words"] = vector_to_numpy_array_2d(charge_adc_);
+    fem_dict_["charge_adc_idx"] = vector_to_numpy_array_2d(charge_adc_idx_);
 
     event_dict_ = fem_dict_;
 
@@ -264,6 +332,7 @@ void ProcessEvents::FillFemDict() {
     event_struct_.light_adc = std::move(light_adc_);
     event_struct_.charge_channel = std::move(charge_channel_);
     event_struct_.charge_adc = std::move(charge_adc_);
+    event_struct_.charge_adc_idx = std::move(charge_adc_idx_);
 
 #endif
 }

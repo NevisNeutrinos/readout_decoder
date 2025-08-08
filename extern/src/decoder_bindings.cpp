@@ -79,11 +79,15 @@ py::array_t<double> ExtReconstructLightAxis(double trig_frame, double trig_sampl
 
 PYBIND11_MODULE(decoder_bindings, m) {
     py::class_<ProcessEvents>(m, "ProcessEvents")
-        .def(py::init<const uint16_t>(), py::arg("light_slot")) // Constructor
+        // Constructor
+        .def(py::init<const uint16_t, bool, const std::vector<uint16_t>>(),
+           py::arg("light_slot"), py::arg("use_charge_roi"), py::arg("channel_threshold"))
         .def("open_file", &ProcessEvents::OpenFile, py::arg("filename"))
         .def("get_event", &ProcessEvents::GetEvent)
         .def("get_num_events", &ProcessEvents::GetNumEvents, py::arg("num_events"))
+        .def("charge_roi", &ProcessEvents::ChargeRoi)
         .def("get_event_dict", &ProcessEvents::GetEventDict);
+
         m.def("get_full_light_waveform", &ExtReconstructLightWaveforms);
         m.def("get_full_light_axis", &ExtReconstructLightAxis);
 }

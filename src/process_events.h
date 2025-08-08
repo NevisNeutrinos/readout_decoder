@@ -9,6 +9,7 @@
 #include <string>
 #include <iostream>
 #include <memory>
+#include <vector>
 
 #ifdef USE_PYBIND11
     #include "process_events_py.h"
@@ -18,6 +19,7 @@ struct EventStruct {
     // Charge
     std::vector<uint16_t> charge_channel;
     std::vector<std::vector<uint16_t>> charge_adc;
+    std::vector<std::vector<uint16_t>> charge_adc_idx;
     // Light
     std::vector<uint16_t> light_channel;
     std::vector<uint8_t> light_trigger_id;
@@ -39,6 +41,7 @@ struct EventStruct {
         // Charge
         charge_channel.clear();
         charge_adc.clear();
+        charge_adc_idx.clear();
         // Light
         light_channel.clear();
         light_trigger_id.clear();
@@ -60,7 +63,7 @@ struct EventStruct {
 
 class ProcessEvents {
 public:
-    explicit ProcessEvents(uint16_t light_slot);
+    explicit ProcessEvents(uint16_t light_slot, bool use_charge_roi, const std::vector<uint16_t> &channel_threshold);
     ~ProcessEvents();
 
     bool OpenFile(const std::string &file_name);
@@ -71,6 +74,7 @@ public:
     void SetFemData();
     void ClearFemVectors();
     void ReconstructLightWaveforms();
+    void ChargeRoi(uint16_t channel, const std::vector<uint16_t> &charge_words);
 
 #ifdef USE_PYBIND11
     // For each FEM fill a python dictionary
@@ -82,6 +86,7 @@ public:
 
 private:
 
+    bool use_charge_roi_;
     static constexpr size_t num_light_channels_ = 32;
 
     std::unique_ptr<decoder::Decoder> charge_light_decoder_;
@@ -96,9 +101,11 @@ private:
     size_t charge_channel_number_ = 0;
     size_t light_roi_number_ = 0;
     uint16_t light_slot_ = 0;
+    std::vector<uint16_t> channel_threshold_;
 
     std::array<std::array<uint16_t, 595>, 64> charge_adc_arr_{};
     std::vector<std::vector<uint16_t>> charge_adc_{};
+    std::vector<std::vector<uint16_t>> charge_adc_idx_{};
     std::vector<std::vector<uint16_t>> light_adc_{};
     std::vector<uint16_t> charge_channel_{};
     std::vector<uint16_t> light_channel_{};
