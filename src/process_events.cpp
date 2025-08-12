@@ -89,9 +89,9 @@ bool ProcessEvents::GetEvent() {
             continue;
         }
         if (decoder::Decoder::IsEventEnd(word_32)) {
-            if ((event_number_ % 100) == 0) std::cout << "+++ Event [" << event_number_ << "]" << std::endl;
-            event_number_++;
+            if ((event_number_ % 500) == 0) std::cout << "+++ Event [" << event_number_ << "]" << std::endl;
             FillFemDict();
+            event_number_++;
             return true;
         }
         if (decoder::Decoder::IsHeaderWord(word_32)) {
@@ -291,6 +291,7 @@ void ProcessEvents::FillFemDict() {
 #ifdef USE_PYBIND11
     pybind11::dict fem_dict_;
     // FEM header
+    fem_dict_["event_index"] = event_number_;
     fem_dict_["slot_number"] = vector_to_numpy_array_1d(slot_number_v_);
     fem_dict_["num_adc_word"] = vector_to_numpy_array_1d(num_adc_word_v_);
     fem_dict_["event_number"] = vector_to_numpy_array_1d(event_number_v_);
