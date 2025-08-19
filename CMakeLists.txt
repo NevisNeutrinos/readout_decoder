@@ -1,8 +1,10 @@
-cmake_minimum_required(VERSION 3.30)
+cmake_minimum_required(VERSION 3.15)
 project(raw_decoder)
 
 set(CMAKE_CXX_STANDARD 17)
-set(USE_PYTHON TRUE)
+
+# This allows a parent CMake to overide the value define here
+option(USE_PYTHON TRUE)
 message("SET PYTHON TO ${USE_PYTHON}")
 
 file(GLOB DECODER_SRC src/*cpp)
