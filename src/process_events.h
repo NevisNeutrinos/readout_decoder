@@ -75,6 +75,9 @@ public:
     void ClearFemVectors();
     void ReconstructLightWaveforms();
     void ChargeRoi(uint16_t channel, const std::vector<uint16_t> &charge_words);
+    void UseEventStride(const bool use_event_stride) { use_event_stride_ = use_event_stride; }
+    void SetEventStride(const size_t event_stride) { event_stride_ = event_stride; }
+    EventStruct &GetEventStruct() { return event_struct_; }
 
 #ifdef USE_PYBIND11
     // For each FEM fill a python dictionary
@@ -88,6 +91,10 @@ private:
 
     bool use_charge_roi_;
     static constexpr size_t num_light_channels_ = 32;
+
+    // If set to false, only decode every N events (based on event start/end)
+    bool use_event_stride_ = true;
+    size_t event_stride_ = 0;
 
     std::unique_ptr<decoder::Decoder> charge_light_decoder_;
     FILE *data_file_{};

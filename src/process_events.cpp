@@ -67,6 +67,11 @@ bool ProcessEvents::OpenFile(const std::string &file_name) {
         return false;
     }
     std::cout << "Read file.." << std::endl;
+
+    // With the checks above the data_file is guaranteed to be valid
+    fclose(data_file_);
+    data_file_ = nullptr;
+
     return true;
 }
 
@@ -93,6 +98,9 @@ bool ProcessEvents::GetEvent() {
             FillFemDict();
             event_number_++;
             return true;
+        }
+        if (use_event_stride_ && ((event_number_ % event_stride_) != 0)) {
+            continue;
         }
         if (decoder::Decoder::IsHeaderWord(word_32)) {
             // returns true when the last FEM header word is reached, so set the FEM data
@@ -165,11 +173,11 @@ bool ProcessEvents::GetEvent() {
             }
         }
     }
-
-    if (data_file_ != nullptr) {
-        fclose(data_file_);
-        data_file_ = nullptr;
-    }
+    // FIXME I think I can close the file after reading it into the buffer, check.
+    // if (data_file_ != nullptr) {
+    //     fclose(data_file_);
+    //     data_file_ = nullptr;
+    // }
 
     std::cout << "event_number_: " << event_number_ << std::endl;
     return false;
