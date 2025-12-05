@@ -89,7 +89,9 @@ namespace decoder {
         const uint32_t trig_frame_num = (event_frame_number & 0xFFFFF0) | (fem_header6_t.trig_frame_number_lower & 0xF);
 
         // return CorrectRollover(event_frame_number, trig_frame_num);
-        return trig_frame_num + CorrectRollover(event_frame_number, trig_frame_num);
+        //return trig_frame_num + CorrectRollover(event_frame_number, trig_frame_num);
+        // Swap arg order, previously correcting in the wrong direction
+        return trig_frame_num + CorrectRollover(trig_frame_num, event_frame_number);
     }
 
 } // decoder namespace

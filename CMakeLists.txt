@@ -19,6 +19,9 @@ if(USE_PYTHON)
 else()
     message("Compiling decoder without python..")
     include_directories(src)
+    add_executable(run_raw_decoder run_decode.cpp
+             ${DECODER_SRC})
+
     add_library(raw_decoder STATIC src/process_events.cpp
                                     src/charge_light_decoder.cpp)
     INSTALL(TARGETS raw_decoder DESTINATION .)

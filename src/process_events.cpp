@@ -7,9 +7,10 @@
 #include <cerrno>
 
 
-ProcessEvents::ProcessEvents(const uint16_t light_slot, bool use_charge_roi, const std::vector<uint16_t> &channel_threshold):
+ProcessEvents::ProcessEvents(const uint16_t light_slot, bool use_charge_roi, const std::vector<uint16_t> &channel_threshold, bool skip_beam_roi):
     use_charge_roi_(use_charge_roi),
     channel_threshold_(channel_threshold),
+    skip_beam_roi_(skip_beam_roi),
     charge_light_decoder_(nullptr), light_slot_(light_slot) {
     charge_light_decoder_ = std::make_unique<decoder::Decoder>();
     channel_full_waveform_.reserve(num_light_channels_);
@@ -75,6 +76,8 @@ bool ProcessEvents::GetEvent() {
     bool read_charge_channel = false;
     bool read_light_channel = false;
     bool light_word_header_done = false;
+    bool reading_light_channel_roi = false;
+    size_t tmp_counter = 0;
 
     // This will run from the start of the event until
     // end of event marker is reached or if all words are
@@ -132,31 +135,65 @@ bool ProcessEvents::GetEvent() {
             }
             else if (decoder::Decoder::LightChannelStart(word) && slot_number == light_slot_) {
                 read_light_channel = true;
+                // Initialize everything just to make sure nothing persists from the previous
+                // event. A fresh event should have a fresh start
+                charge_light_decoder_->LightWord = 0;
+                charge_light_decoder_->ResetAdcWordVector();
+                light_word_header_done = false;
+                reading_light_channel_roi = false;
             }
             else if (decoder::Decoder::LightChannelEnd(word) && slot_number == light_slot_) {
                 read_light_channel = false;
             }
+            // ROIs within a light FEM
             else if (read_light_channel) {
+                // std::cout <<  std::hex << word << ",";
                 if (!decoder::Decoder::LightChannelIntmed(word)) {
                     // std::cerr << "Unexpected word ID!" << std::endl;
                 }
                 if (decoder::Decoder::LightRoiHeader1(word) || !light_word_header_done) {
+                    // We need to check first in case there was no ROI end marker in which case we
+                    // need to reset the ROI header state machine and clear the sample array.
+                    if (decoder::Decoder::LightRoiHeader1(word)) {
+                        // If there was no end of ROI marker, drop data, reset and keep going
+                        if (reading_light_channel_roi) {
+                            charge_light_decoder_->LightWord = 0;
+                            charge_light_decoder_->ResetAdcWordVector();
+                        }
+                        reading_light_channel_roi = true;
+                    }
                     light_word_header_done = charge_light_decoder_->FemLightDecode(word);
+                    // Unexpected end ROI marker, reset everything
+                    if (decoder::Decoder::LightRoiEnd(word)) {
+                        charge_light_decoder_->LightWord = 0;
+                        charge_light_decoder_->ResetAdcWordVector();
+                        reading_light_channel_roi = false;
+                        light_word_header_done = false;
+                    }
+                    // std::cout << " RH1" << std::dec << " [" << tmp_counter << "] ";
                 }
-                else if (decoder::Decoder::LightRoiHeader2(word)) {
+                else if (decoder::Decoder::LightRoiHeader2(word) && reading_light_channel_roi) {
+                    tmp_counter++;
                     charge_light_decoder_->DecodeAdcWord(word);
+                    // std::cout << " RH2" << std::dec << " [" << tmp_counter << "] ";
                 }
-                else if (decoder::Decoder::LightRoiEnd(word)) {
+                else if (decoder::Decoder::LightRoiEnd(word) && reading_light_channel_roi) {
+                    // std::cout << " RE" << std::dec << " ["<< tmp_counter << "] ";
                     charge_light_decoder_->LightWord = 0;
-                    light_adc_.push_back(charge_light_decoder_->GetAdcWords());
+                    uint16_t disc_id = charge_light_decoder_->GetLightTriggerId();
+                    if((!skip_beam_roi_ || (disc_id != 0x4)) && reading_light_channel_roi) {
+                        light_adc_.push_back(charge_light_decoder_->GetAdcWords());
+                        light_channel_.push_back(charge_light_decoder_->GetLightChannel());
+                        light_trigger_id_.push_back(disc_id);
+                        light_header_tag_.push_back(charge_light_decoder_->GetLightHeaderTag());
+                        light_word_tag_.push_back(charge_light_decoder_->GetLightWordTag());
+                        light_frame_number_.push_back(charge_light_decoder_->GetLightFrameNumber());
+                        light_sample_number_.push_back(charge_light_decoder_->GetLightSampleNumber());
+                    }
                     charge_light_decoder_->ResetAdcWordVector();
-                    light_channel_.push_back(charge_light_decoder_->GetLightChannel());
-                    light_trigger_id_.push_back(charge_light_decoder_->GetLightTriggerId());
-                    light_header_tag_.push_back(charge_light_decoder_->GetLightHeaderTag());
-                    light_word_tag_.push_back(charge_light_decoder_->GetLightWordTag());
-                    light_frame_number_.push_back(charge_light_decoder_->GetLightFrameNumber());
-                    light_sample_number_.push_back(charge_light_decoder_->GetLightSampleNumber());
                     light_word_header_done = false;
+                    reading_light_channel_roi = false;
+                    tmp_counter = 0;
                 }
                 else {
                     // std::cout << "Unexpected light word! " << (word & 0x3000)  << " "
@@ -286,6 +323,18 @@ void ProcessEvents::FillFemDict() {
     for (size_t i = 0; i < num_light_channels_; i++) {
         channel_full_waveform_.emplace_back();
         channel_full_axis_.emplace_back();
+    }
+    // All ROIs should have the same number of samples but the hardware can fail
+    // and cause samples to be dropped. Since numpy cannot handle ragged arrays
+    // we set all the ROIs to the same length filling the missing samples with
+    // 2^16 values which is obviously not an actual ADC value
+    size_t max_size = 0;
+    for (const auto & roi : light_adc_) { // for each ROI
+        max_size = std::max(max_size, roi.size()); // num ROI samples
+    }
+
+    for (auto & roi : light_adc_) { // for each ROI
+        roi.resize(max_size, UINT16_MAX); // ensure they are all the same length
     }
 
 #ifdef USE_PYBIND11
