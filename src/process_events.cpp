@@ -84,6 +84,7 @@ bool ProcessEvents::GetEvent() {
     // read from file.
 
     while (word_idx_ < file_num_words_) {
+        process_event_ = true;
         const uint32_t word_32 = file_buffer_[word_idx_];
         word_idx_++;
         if (decoder::Decoder::IsEventStart(word_32)) {
@@ -96,6 +97,9 @@ bool ProcessEvents::GetEvent() {
             FillFemDict();
             event_number_++;
             return true;
+        }
+        if (use_event_stride_ && ((event_number_ % event_stride_) != 0)) {
+            process_event_ = false;
         }
         if (decoder::Decoder::IsHeaderWord(word_32)) {
             // returns true when the last FEM header word is reached, so set the FEM data
@@ -118,12 +122,13 @@ bool ProcessEvents::GetEvent() {
             }
             else if (decoder::Decoder::ChargeChannelEnd(word) && read_charge_channel && slot_number != light_slot_) {
                 read_charge_channel = false;
-
-                if (use_charge_roi_) {
-                    ChargeRoi(charge_channel_number_++, charge_light_decoder_->GetAdcWords());
-                } else {
-                    charge_adc_.push_back(charge_light_decoder_->GetAdcWords());
-                    charge_channel_.push_back(charge_channel_number_++);
+                if (process_event_) {
+                    if (use_charge_roi_) {
+                        ChargeRoi(charge_channel_number_++, charge_light_decoder_->GetAdcWords());
+                    } else {
+                        charge_adc_.push_back(charge_light_decoder_->GetAdcWords());
+                        charge_channel_.push_back(charge_channel_number_++);
+                   }
                 }
                 charge_light_decoder_->ResetAdcWordVector();
             }
@@ -181,7 +186,7 @@ bool ProcessEvents::GetEvent() {
                     // std::cout << " RE" << std::dec << " ["<< tmp_counter << "] ";
                     charge_light_decoder_->LightWord = 0;
                     uint16_t disc_id = charge_light_decoder_->GetLightTriggerId();
-                    if((!skip_beam_roi_ || (disc_id != 0x4)) && reading_light_channel_roi) {
+                    if(process_event_ && (!skip_beam_roi_ || (disc_id != 0x4)) && reading_light_channel_roi) {
                         light_adc_.push_back(charge_light_decoder_->GetAdcWords());
                         light_channel_.push_back(charge_light_decoder_->GetLightChannel());
                         light_trigger_id_.push_back(disc_id);
