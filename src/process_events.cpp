@@ -379,9 +379,9 @@ void ProcessEvents::FillFemDict() {
     event_struct_.check_sum = std::move(check_sum_v_);
     event_struct_.trigger_sample = std::move(trigger_sample_v_);
     event_struct_.light_channel = std::move(light_channel_);
-    light_trigger_id_ = std::move(light_trigger_id_);
-    light_header_tag_ = std::move(light_header_tag_);
-    light_word_tag_ = std::move(light_word_tag_);
+    event_struct_.light_trigger_id = std::move(light_trigger_id_);
+    event_struct_.light_header_tag = std::move(light_header_tag_);
+    event_struct_.light_word_tag = std::move(light_word_tag_);
     event_struct_.light_frame_number = std::move(light_frame_number_);
     event_struct_.light_sample_number = std::move(light_sample_number_);
     event_struct_.light_adc = std::move(light_adc_);
