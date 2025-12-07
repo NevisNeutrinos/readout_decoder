@@ -33,6 +33,7 @@ bool ProcessEvents::OpenFile(const std::string &file_name) {
 
     // In case there's a file already open
     word_idx_ = 0;
+    event_number_ = 0;
     if (data_file_) {
         file_buffer_.reset(nullptr);
         std::cout << "Closing data file!" << std::endl;
@@ -101,6 +102,7 @@ bool ProcessEvents::GetEvent() {
         if (use_event_stride_ && ((event_number_ % event_stride_) != 0)) {
             process_event_ = false;
         }
+
         if (decoder::Decoder::IsHeaderWord(word_32)) {
             // returns true when the last FEM header word is reached, so set the FEM data
             if (charge_light_decoder_->FemHeaderDecode(word_32)) SetFemData();
