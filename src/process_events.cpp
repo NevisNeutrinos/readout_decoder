@@ -169,7 +169,7 @@ bool ProcessEvents::GetEvent() {
                         }
                         reading_light_channel_roi = true;
                     }
-                    light_word_header_done = charge_light_decoder_->FemLightDecode(word);
+                    if (decoder::Decoder::LightValidRoiHeader(word)) light_word_header_done = charge_light_decoder_->FemLightDecode(word);
                     // Unexpected end ROI marker, reset everything
                     if (decoder::Decoder::LightRoiEnd(word)) {
                         charge_light_decoder_->LightWord = 0;

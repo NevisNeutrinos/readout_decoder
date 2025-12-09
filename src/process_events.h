@@ -94,8 +94,8 @@ private:
     static constexpr size_t num_light_channels_ = 32;
 
     // If set to false, only decode every N events (based on event start/end)
-    bool use_event_stride_ = true;
-    size_t event_stride_ = 0;
+    bool use_event_stride_ = false;
+    size_t event_stride_ = 1;
 
     std::unique_ptr<decoder::Decoder> charge_light_decoder_;
     FILE *data_file_{};

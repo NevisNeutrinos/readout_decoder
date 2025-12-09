@@ -165,6 +165,7 @@ namespace decoder {
         static bool LightChannelIntmed(const uint16_t word) {return (word & 0xC000) == light_channel_intmed_;}
         static bool LightRoiHeader1(const uint16_t word) {return (word & 0x3000) == light_roi_header1_;}
         static bool LightRoiHeader2(const uint16_t word) {return (word & 0x3000) == light_roi_header2_;}
+        static bool LightValidRoiHeader(const uint16_t word) {return (word & 0x3000) != 0x0;} // must be 0x1,0x2 or 0x3
         static bool LightRoiEnd(const uint16_t word) {return (word & 0x3000) == light_roi_end_;}
 
         bool FemHeaderDecode(uint32_t header_word);
