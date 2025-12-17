@@ -59,7 +59,7 @@ bool ProcessEvents::OpenFile(const std::string &file_name) {
 
     // allocate space in the buffer for the whole file
 
-    file_buffer_ = std::make_unique<int[]>(file_num_words_);
+    file_buffer_ = std::make_unique<uint32_t[]>(file_num_words_);
     std::cout << "Allocated file buffer.." << std::endl;
 
     fread(file_buffer_.get(), fileSize, 1, data_file_);
