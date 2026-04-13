@@ -78,6 +78,9 @@ public:
     void UseEventStride(const bool use_event_stride) { use_event_stride_ = use_event_stride; }
     void SetEventStride(const size_t event_stride) { event_stride_ = event_stride; }
     EventStruct &GetEventStruct() { return event_struct_; }
+    std::vector<uint32_t> GetBinaryData(size_t num_words);
+    bool IsFileOpen(const std::string &file_name) { return file_name == open_file_name_; }
+    void RestartFile();
 
 #ifdef USE_PYBIND11
     // For each FEM fill a python dictionary
@@ -100,9 +103,11 @@ private:
     std::unique_ptr<decoder::Decoder> charge_light_decoder_;
     FILE *data_file_{};
     std::unique_ptr<uint32_t[]> file_buffer_{};
+    std::string open_file_name_;
 
     size_t file_num_words_{};
     size_t word_idx_ = 0;
+    size_t binary_32b_word_counter_ = 0;
 
     // Charge ADC arrays
     size_t event_number_ = 0;

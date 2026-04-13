@@ -7,7 +7,10 @@
 #include <cerrno>
 
 
-ProcessEvents::ProcessEvents(const uint16_t light_slot, bool use_charge_roi, const std::vector<uint16_t> &channel_threshold, bool skip_beam_roi):
+ProcessEvents::ProcessEvents(const uint16_t light_slot,
+    bool use_charge_roi,
+    const std::vector<uint16_t> &channel_threshold,
+    bool skip_beam_roi):
     use_charge_roi_(use_charge_roi),
     channel_threshold_(channel_threshold),
     skip_beam_roi_(skip_beam_roi),
@@ -21,6 +24,7 @@ ProcessEvents::~ProcessEvents() {
 
     if (data_file_) {
         std::cout << "Closing data file!" << std::endl;
+        open_file_name_ = "";
         file_buffer_.reset(nullptr);
         fclose(data_file_);
         //delete[] data_file_; // FIXME memory freed twice!
@@ -31,15 +35,22 @@ ProcessEvents::~ProcessEvents() {
 
 bool ProcessEvents::OpenFile(const std::string &file_name) {
 
+    if (open_file_name_ == file_name) {
+        std::cout << "File already opened!" << std::endl;
+        return true;
+    }
+    // Check if the file is already open
     // In case there's a file already open
     word_idx_ = 0;
     event_number_ = 0;
+    binary_32b_word_counter_ = 0;
     if (data_file_) {
         file_buffer_.reset(nullptr);
         std::cout << "Closing data file!" << std::endl;
         fclose(data_file_);
         //delete[] data_file_; // FIXME memory freed twice!
         data_file_ = nullptr;
+        open_file_name_ = "";
     }
 
     std::cout << "Opening file " << file_name << std::endl;
@@ -69,8 +80,37 @@ bool ProcessEvents::OpenFile(const std::string &file_name) {
         return false;
     }
     std::cout << "Read file.." << std::endl;
+    open_file_name_ = file_name;
     return true;
 }
+
+void ProcessEvents::RestartFile() {
+    // Restart at the beginning of the file.
+    // Avoid reloading file but restart processing from beginning
+    word_idx_ = 0;
+    event_number_ = 0;
+    binary_32b_word_counter_ = 0;
+}
+
+std::vector<uint32_t> ProcessEvents::GetBinaryData(size_t num_words) {
+
+    if (data_file_ == nullptr) { // Do nothing if file is not open
+        return {};
+    }
+    // If requesting more than the remaining file data, only return the remaining words
+    if ((binary_32b_word_counter_ + num_words) > file_num_words_) {
+        num_words = file_num_words_ - binary_32b_word_counter_;
+    }
+    // Copy binary data into the vector upon its construction
+    const uint32_t* start_ptr = &file_buffer_[binary_32b_word_counter_];
+    const uint32_t* end_ptr   = start_ptr + num_words;
+    std::vector<uint32_t> binary_data(start_ptr, end_ptr);
+
+    binary_32b_word_counter_ = binary_32b_word_counter_ + num_words;
+
+    return binary_data;
+}
+
 
 bool ProcessEvents::GetEvent() {
 
@@ -79,6 +119,9 @@ bool ProcessEvents::GetEvent() {
     bool light_word_header_done = false;
     bool reading_light_channel_roi = false;
     size_t tmp_counter = 0;
+
+    // Make sure the ADC vector is cleared and ready
+    charge_light_decoder_->ResetAdcWordVector();
 
     // This will run from the start of the event until
     // end of event marker is reached or if all words are
